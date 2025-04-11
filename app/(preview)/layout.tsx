@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Metadata } from "next";
 import { Toaster } from "sonner";
-import { AI } from "./actions";
+// Removed: import { AI } from "./actions";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ai-sdk-preview-rsc-genui.vercel.dev"),
@@ -18,7 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Toaster position="top-center" richColors />
-        <AI>{children}</AI>
+        {children} {/* Removed AI wrapper */}
       </body>
     </html>
   );
