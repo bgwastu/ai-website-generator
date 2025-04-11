@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BotIcon, UserIcon } from "./icons";
+import { Markdown } from "./markdown"; // Import the Markdown component
 import { ReactNode } from "react";
 // Removed ai/rsc imports: StreamableValue, useStreamableValue
 // Removed Markdown import as it was only used in TextStreamMessage
@@ -13,7 +14,7 @@ export const Message = ({
   content,
 }: {
   role: "assistant" | "user";
-  content: ReactNode; // Content from useChat is already ReactNode or string
+  content: string | ReactNode; // Revert type slightly to handle potential string content for Markdown
 }) => {
   return (
     <motion.div
@@ -26,8 +27,9 @@ export const Message = ({
       </div>
 
       <div className="flex flex-col gap-1 w-full">
-        <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4">
-          {content}
+        <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4 prose prose-zinc dark:prose-invert prose-sm max-w-none"> {/* Added prose classes */}
+          {/* Render content using Markdown component if it's a string */}
+          {typeof content === 'string' ? <Markdown>{content}</Markdown> : content}
         </div>
       </div>
     </motion.div>

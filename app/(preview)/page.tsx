@@ -1,39 +1,36 @@
 "use client";
 
-import { useRef } from "react";
-import { useChat, Message as MessageType } from "@ai-sdk/react";
-import { ToolInvocation } from "ai"; // Import ToolInvocation from 'ai'
+import { VercelIcon } from "@/components/icons";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
+import { Message as MessageType, useChat } from "@ai-sdk/react";
+import { ToolInvocation } from "ai"; // Import ToolInvocation from 'ai'
 import { motion } from "framer-motion";
-import { MasonryIcon, VercelIcon } from "@/components/icons";
-import { CameraView } from "@/components/camera-view";
-import { HubView } from "@/components/hub-view";
-import { UsageView } from "@/components/usage-view";
-import { Hub } from "../api/chat/route"; // Import Hub type
+import { useRef } from "react";
+// Removed UsageView and Hub imports
+import HtmlViewer from "@/components/html-viewer"; // Import the new viewer
 import Link from "next/link";
+import { toast } from "sonner"; // Import toast for error messages
 
 export default function Home() {
   const { messages, input, setInput, handleSubmit, append } = useChat({
     api: "/api/chat",
+    // Add client-side error handling
+    onError: (error) => {
+      console.error("Chat error:", error); // Log the error for debugging
+      toast.error(`An error occurred: ${error.message}`); // Show user-friendly toast
+    },
   });
   const inputRef = useRef<HTMLInputElement>(null);
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
+  // Update suggested actions for website generation
   const suggestedActions = [
-    { title: "View all", label: "my cameras", action: "View all my cameras" },
-    { title: "Show me", label: "my smart home hub", action: "Show me my smart home hub" },
-    {
-      title: "How much",
-      label: "electricity have I used this month?",
-      action: "Show electricity usage",
-    },
-    {
-      title: "How much",
-      label: "water have I used this month?",
-      action: "Show water usage",
-    },
+    { title: "Create a", label: "portfolio website", action: "Create a portfolio website for a photographer" },
+    { title: "Build a", label: "landing page for my app", action: "Build a landing page for a new mobile app called 'TaskMaster'" },
+    { title: "Generate a", label: "simple blog layout", action: "Generate a simple blog layout with a header, main content area, and sidebar" },
+    { title: "Design a", label: "contact page", action: "Design a contact page with a form (name, email, message)" },
   ];
 
   return (
@@ -45,29 +42,22 @@ export default function Home() {
         >
           {messages.length === 0 && (
             <motion.div className="h-[350px] px-4 w-full md:w-[500px] md:px-0 pt-20">
+              {/* Update placeholder content */}
               <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm dark:text-zinc-400 dark:border-zinc-700">
-                <p className="flex flex-row justify-center gap-4 items-center text-zinc-900 dark:text-zinc-50">
-                  <VercelIcon size={16} />
-                  <span>+</span>
-                  <MasonryIcon />
-                </p>
-                <p>
-                  The streamUI function allows you to stream React Server
-                  Components along with your language model generations to
-                  integrate dynamic user interfaces into your application.
-                </p>
-                <p>
-                  {" "}
-                  Learn more about the{" "}
-                  <Link
-                    className="text-blue-500 dark:text-blue-400"
-                    href="https://sdk.vercel.ai/docs/ai-sdk-rsc/streaming-react-components"
-                    target="_blank"
-                  >
-                    streamUI{" "}
-                  </Link>
-                  hook from Vercel AI SDK.
-                </p>
+                 <p className="flex flex-row justify-center gap-4 items-center text-zinc-900 dark:text-zinc-50">
+                   {/* Replace icons if desired */}
+                   <VercelIcon size={16} />
+                   <span>AI Website Generator</span>
+                 </p>
+                 <p>
+                   Start by describing the website you want to build, or try one of the suggestions below.
+                 </p>
+                 <p>
+                   The AI will ask clarifying questions to gather requirements before generating the HTML.
+                 </p>
+                 <p>
+                   Powered by <Link className="text-blue-500 dark:text-blue-400" href="https://sdk.vercel.ai/" target="_blank">Vercel AI SDK</Link> and Google Gemini.
+                 </p>
               </div>
             </motion.div>
           )}
@@ -78,46 +68,29 @@ export default function Home() {
                 {/* Render the main message content */}
                 <Message role={m.role as 'user' | 'assistant'} content={m.content} />
 
-                {/* Render tool invocation results below the message */}
+                {/* Render tool invocation results - specifically the HTML viewer */}
                 {m.toolInvocations?.map((toolInvocation: ToolInvocation) => {
-                  const { toolName, toolCallId, state } = toolInvocation; // Destructure only common properties initially
+                  const { toolName, toolCallId, state } = toolInvocation;
 
-                  // Render loading state for the tool (when state is not 'result')
-                  if (state !== 'result') {
+                  // Optional: Render loading state for the tool
+                  if (state !== 'result' && toolName === 'displayWebsite') {
+                     return (
+                       <div key={toolCallId} className="flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0 text-sm text-zinc-500 dark:text-zinc-400">
+                         <div className="size-[24px] flex-shrink-0"></div> {/* Spacer */}
+                         <div>Generating website preview...</div>
+                       </div>
+                     );
+                  }
+
+                  // Render the HTML viewer when the tool result is available
+                  if (state === 'result' && toolName === 'displayWebsite') {
+                    const { result } = toolInvocation;
+                    const htmlContent = (result as { htmlContent: string }).htmlContent;
                     return (
-                      <div key={toolCallId} className="flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0 text-sm text-zinc-500 dark:text-zinc-400">
-                        <div className="size-[24px] flex-shrink-0"></div> {/* Spacer */}
-                        <div>Loading {toolName}...</div>
-                      </div>
+                      <HtmlViewer key={toolCallId} htmlContent={htmlContent} />
                     );
                   }
-
-                  // Render the component based on the tool result
-                  if (state === 'result') {
-                    const { result } = toolInvocation; // Destructure result only when state is 'result'
-                    // Wrap tool results for consistent layout
-                    return (
-                       <div key={toolCallId} className="flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0">
-                         <div className="size-[24px] flex-shrink-0"></div> {/* Spacer */}
-                         <div className="flex flex-col gap-1 w-full">
-                           {(() => {
-                              switch (toolName) {
-                                case 'viewCameras':
-                                  return <CameraView />;
-                                case 'viewHub':
-                                case 'updateHub':
-                                  return <HubView hub={result as Hub} />;
-                                case 'viewUsage':
-                                  return <UsageView type={(result as { type: 'electricity' | 'water' | 'gas' }).type} />;
-                                default:
-                                  return <div>Tool {toolName} result: {JSON.stringify(result)}</div>; // Fallback display
-                              }
-                           })()}
-                         </div>
-                       </div>
-                    )
-                  }
-                  return null; // Handle other states like 'error' if needed
+                  return null; // Ignore results from other potential tools or states
                 })}
               </div>
           ))}

@@ -1,99 +1,49 @@
 import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { google } from '@ai-sdk/google'; // Import Google provider
 import { CoreMessage } from 'ai';
 import { z } from 'zod';
-import { generateId } from 'ai'; // Keep for potential tool call IDs if needed internally, though useChat handles client-side IDs
+// Removed generateId import
 
-// Define Hub interface and initial state here or import from a shared location
-export interface Hub {
-  climate: Record<"low" | "high", number>;
-  lights: Array<{ name: string; status: boolean }>;
-  locks: Array<{ name: string; isLocked: boolean }>;
-}
+// Removed Hub interface, state, and old tool schemas
 
-// In-memory state for the hub (move to DB in production)
-let hub: Hub = {
-  climate: {
-    low: 23,
-    high: 25,
-  },
-  lights: [
-    { name: "patio", status: true },
-    { name: "kitchen", status: false },
-    { name: "garage", status: true },
-  ],
-  locks: [{ name: "back door", isLocked: true }],
-};
-
-// Define schemas for tools
-const viewCamerasParams = z.object({});
-const viewHubParams = z.object({});
-const updateHubParams = z.object({
-  hub: z.object({
-    climate: z.object({
-      low: z.number(),
-      high: z.number(),
-    }),
-    lights: z.array(
-      z.object({ name: z.string(), status: z.boolean() })
-    ),
-    locks: z.array(
-      z.object({ name: z.string(), isLocked: z.boolean() })
-    ),
-  }),
-});
-const viewUsageParams = z.object({
-  type: z.enum(["electricity", "water", "gas"]),
+// Define schema for the new website generation tool
+const displayWebsiteSchema = z.object({
+  htmlContent: z.string().describe('The complete HTML content for the single-page website, including Tailwind and Alpine.js via CDN.'),
 });
 
+
+// Removed incorrect Response import from 'next/server'
 
 export async function POST(req: Request) {
-  const { messages }: { messages: CoreMessage[] } = await req.json();
-
-  const result = await streamText({
-    model: openai('gpt-4o'),
+  try {
+    const { messages }: { messages: CoreMessage[] } = await req.json();
+  const result = streamText({
+    // Use Google Gemini model - API key should be automatically picked up from process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    model: google("gemini-2.0-flash-001"),
     system: `\
-      - you are a friendly home automation assistant
-      - reply in lower case
+You are an expert web developer AI assistant. Your goal is to help users create single-page websites that are complex and have a lot of interactivity.
+Engage in a conversation to understand the user's requirements for the website. Ask clarifying questions until you have enough details. If you can use another data source on public API, use it. Add buttons, links, and other interactive elements to the website.
+Once you have sufficient information, generate the complete HTML for a single 'index.html' file.
+This HTML file MUST include:
+- Font Awesome via CDN (<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />).
+- Tailwind CSS via CDN (<script src="https://cdn.tailwindcss.com"></script>).
+- Alpine.js via CDN (<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>).
+- Animation library via CDN (<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>).
+- All necessary HTML structure, content based on the user's requirements, and inline CSS/JS (using Alpine.js for interactivity where appropriate).
+When the HTML is ready, call the 'displayWebsite' tool with the complete HTML content. **Do not include the HTML code itself in your text response to the user.** Simply confirm that you are displaying the website.
+Start with simple landing pages and gradually increase complexity based on the conversation.
+Be conversational and helpful throughout the process.
     `,
     messages,
     tools: {
-      viewCameras: {
-        description: 'view current active cameras',
-        parameters: viewCamerasParams,
-        execute: async ({}) => {
-          // In AI SDK UI, tool execution returns data, not components.
-          // The client will render the CameraView component.
-          // We can return a simple status or confirmation.
-          return { status: 'displaying cameras' };
-          // Note: The original RSC implementation updated AI state here.
-          // streamText/useChat handles this automatically based on tool results.
-        },
-      },
-      viewHub: {
-        description: 'view the hub that contains current quick summary and actions for temperature, lights, and locks',
-        parameters: viewHubParams,
-        execute: async ({}) => {
-          // Return the current hub state data. Client renders HubView.
-          return hub;
-        },
-      },
-      updateHub: {
-        description: 'update the hub with new values',
-        parameters: updateHubParams,
-        execute: async ({ hub: newHub }) => {
-          // Update the in-memory state
-          hub = newHub;
-          // Return the updated hub state. Client renders HubView.
-          return hub;
-        },
-      },
-      viewUsage: {
-        description: 'view current usage for electricity, water, or gas',
-        parameters: viewUsageParams,
-        execute: async ({ type }) => {
-          // Return the type of usage requested. Client renders UsageView.
-          return { type };
+      displayWebsite: {
+        description:
+          "Displays the generated single-page website HTML to the user.",
+        parameters: displayWebsiteSchema,
+        execute: async ({ htmlContent }) => {
+          // The tool's purpose is to signal the UI to render the HTML.
+          // We just return the content for the client to handle.
+          return { htmlContent };
         },
       },
     },
@@ -104,7 +54,25 @@ export async function POST(req: Request) {
     //   // const finalMessages = [...messages, ...response.messages];
     //   // await saveChatToDb(chatId, finalMessages);
     // },
+    // Add onError for server-side logging of stream errors
+    onError: (error) => {
+      console.error("Error during streamText:", error);
+      // Note: We cannot change the response status code here as headers are already sent.
+      // The primary purpose here is server-side logging.
+    },
   });
 
   return result.toDataStreamResponse();
+
+  } catch (error) {
+    console.error("Error in /api/chat:", error); // Log the error server-side
+
+    // Return a generic error response
+    // Note: This won't stream, but helps identify server-side exceptions
+    if (error instanceof Error) {
+       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    } else {
+       return new Response(JSON.stringify({ error: 'An unknown error occurred' }), { status: 500 });
+    }
+  }
 }
