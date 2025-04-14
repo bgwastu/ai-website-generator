@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { MaximizeIcon, XIcon } from 'lucide-react'; // Import icons for modal
-
+  
 interface HtmlViewerProps {
   htmlContent: string;
 }
@@ -11,7 +11,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null); // Ref for modal iframe
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [portalHeight, setPortalHeight] = useState<string>('250px'); // Fixed height for portal
+  const [portalHeight, setPortalHeight] = useState<string>('100%'); // Changed to 100% height for full-height display
 
   // Function to open the modal
   const openModal = () => setIsModalOpen(true);
@@ -42,10 +42,10 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent }) => {
     <>
       {/* Portal View */}
       <div
-        className="w-full my-4 border rounded-md overflow-hidden dark:border-zinc-700 cursor-pointer group relative"
+        className="w-full h-full border rounded-md overflow-hidden border-zinc-200 cursor-pointer group relative flex flex-col" /* Removed dark mode, added h-full and flex-col */
         onClick={openModal}
       >
-        <div className="bg-zinc-100 dark:bg-zinc-800 px-3 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <div className="bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 flex-shrink-0"> {/* Removed dark mode, added flex-shrink-0 */}
           Generated Website Preview
         </div>
         {/* Overlay for hover effect */}
@@ -54,33 +54,36 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent }) => {
              <MaximizeIcon size={14} /> Click to enlarge
            </span>
         </div>
-        <iframe
-          ref={iframeRef}
-          srcDoc={htmlContent}
-          title="Generated Website Preview Portal"
-          sandbox="allow-scripts allow-same-origin"
-          width="100%"
-          style={{ height: portalHeight, border: 'none', pointerEvents: 'none' }} // Disable pointer events on portal iframe
-          scrolling="no" // Disable scrolling on portal
-        />
+        <div className="flex-grow overflow-auto"> {/* Added wrapper div with flex-grow */}
+          <iframe
+            ref={iframeRef}
+            srcDoc={htmlContent}
+            title="Generated Website Preview Portal"
+            sandbox="allow-scripts allow-same-origin"
+            width="100%"
+            height="100%" /* Changed to 100% height */
+            style={{ border: 'none', pointerEvents: 'none' }} /* Removed height from style */
+            scrolling="auto" /* Changed to auto to allow scrolling */
+          />
+        </div>
       </div>
 
       {/* Modal View */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" /* Kept dark overlay for modal */
           onClick={closeModal} // Close modal on backdrop click
         >
           <div
-            className="relative bg-white dark:bg-zinc-900 w-full h-full rounded-lg shadow-xl overflow-hidden flex flex-col"
+            className="relative bg-white w-full h-full rounded-lg shadow-xl overflow-hidden flex flex-col" /* Removed dark mode */
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal content
           >
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-2 border-b dark:border-zinc-700 flex-shrink-0">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Website Preview</span>
+            <div className="flex justify-between items-center p-2 border-b border-zinc-200 flex-shrink-0"> {/* Removed dark mode */}
+              <span className="text-sm font-medium text-zinc-700">Website Preview</span> {/* Removed dark mode */}
               <button
                 onClick={closeModal}
-                className="text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 p-1 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200" /* Removed dark mode */
                 aria-label="Close preview"
               >
                 <XIcon size={18} />

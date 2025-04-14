@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^1.2.9
+        version: 1.2.9(zod@3.23.8)
       '@ai-sdk/google':
         specifier: ^1.2.10
         version: 1.2.10(zod@3.23.8)
@@ -89,6 +92,12 @@ importers:
         version: 5.5.4
 
 packages:
+
+  '@ai-sdk/anthropic@1.2.9':
+    resolution: {integrity: sha512-IsPKFt45rEhrAIeJisNr5hS1N6NPiVD/sBcS6wqJc2eKp32Q74SqDn6hmEgk4MlqxuWzpUCQ2kjsa75gAV3Hew==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
 
   '@ai-sdk/google@1.2.10':
     resolution: {integrity: sha512-YmZ9DIO6Un0+RU9PtjM9TfoExmUQg2fk8vTlwT+NOaARyhv8eskRCUTne0zf5uUOazPIJuBEv2I6YE9XnS+tUg==}
@@ -2177,6 +2186,12 @@ packages:
 
 snapshots:
 
+  '@ai-sdk/anthropic@1.2.9(zod@3.23.8)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.2
+      '@ai-sdk/provider-utils': 2.2.6(zod@3.23.8)
+      zod: 3.23.8
+
   '@ai-sdk/google@1.2.10(zod@3.23.8)':
     dependencies:
       '@ai-sdk/provider': 1.1.2
@@ -4159,7 +4174,7 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.7
+      nanoid: 3.3.11
       picocolors: 1.0.1
       source-map-js: 1.2.0
 
