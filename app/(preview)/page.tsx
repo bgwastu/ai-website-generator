@@ -15,18 +15,24 @@ export default function Home() {
   // State to hold the latest generated HTML
   const [currentHtml, setCurrentHtml] = useState<string | undefined>(undefined);
 
-  const { messages, input, setInput, handleSubmit, append } = useChat({
-    api: "/api/chat",
-    // Send the current HTML state along with messages
-    body: {
-      currentHtml: currentHtml, // Pass current HTML state
-    },
-    // Add client-side error handling
-    onError: (error) => {
-      console.error("Chat error:", error); // Log the error for debugging
-      toast.error(`An error occurred: ${error.message}`); // Show user-friendly toast
-    },
-    // Removed incorrect onToolFinish
+ // State to track loading status
+ const [isLoading, setIsLoading] = useState(false);
+
+ const { messages, input, setInput, handleSubmit, append, reload, stop } = useChat({
+   api: "/api/chat",
+   // Send the current HTML state along with messages
+   body: {
+     currentHtml: currentHtml, // Pass current HTML state
+   },
+   // Set loading false when the stream finishes or errors
+   onFinish: () => {
+     setIsLoading(false);
+   },
+   onError: (error) => {
+     console.error("Chat error:", error); // Log the error for debugging
+     toast.error(`An error occurred: ${error.message}`); // Show user-friendly toast
+     setIsLoading(false); // Also stop loading on error
+   },
   });
 
   // Effect to update currentHtml when a successful tool call result appears in messages
@@ -144,11 +150,13 @@ export default function Home() {
                   className={index > 1 ? "hidden sm:block" : "block"}
                 >
                   <button
-                    onClick={async () => {
-                      await append({
-                        role: 'user',
-                        content: action.action,
-                      });
+                   onClick={async () => {
+                     setIsLoading(true); // Set loading true before sending
+                     await append({
+                       role: 'user',
+                       content: action.action,
+                     });
+                     // No need to set loading false here, onFinish handles it
                     }}
                     className="w-full text-left border border-zinc-200 text-zinc-800 rounded-lg p-2 text-sm hover:bg-zinc-100 transition-colors flex flex-col" /* Removed dark classes */
                   >
@@ -162,17 +170,21 @@ export default function Home() {
           </div>
 
           <form
-            className="flex flex-col gap-2 relative items-center"
-            onSubmit={handleSubmit}
+           className="flex flex-col gap-2 relative items-center"
+           onSubmit={(e) => {
+             e.preventDefault(); // Prevent default form submission
+             setIsLoading(true); // Set loading true before sending
+             handleSubmit(e); // Call the original handler
+             // No need to set loading false here, onFinish handles it
+           }}
           >
             <input
               ref={inputRef}
-              className="bg-zinc-100 rounded-md px-2 py-1.5 w-full outline-none text-zinc-800 md:max-w-[500px] max-w-[calc(100dvw-32px)] mx-auto" // Removed dark classes, Centered input
-              placeholder="Send a message..."
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-              }}
+             className="bg-zinc-100 rounded-md px-2 py-1.5 w-full outline-none text-zinc-800 md:max-w-[500px] max-w-[calc(100dvw-32px)] mx-auto disabled:opacity-50" // Added disabled style
+             placeholder={isLoading ? "Generating..." : "Send a message..."} // Change placeholder when loading
+             value={input}
+             onChange={(event) => setInput(event.target.value)}
+             disabled={isLoading} // Disable input when loading
             />
           </form>
         </div>
