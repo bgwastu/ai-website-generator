@@ -17,7 +17,12 @@ export default function Home() {
   // State for R2 upload functionality
   const [projectId, setProjectId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
+  const [uploadResult, setUploadResult] = useState<{
+    success: boolean;
+    message: string;
+    url?: string;
+    customUrl?: string;
+  } | null>(null);
 
   // State to track loading status
   const [isLoading, setIsLoading] = useState(false);
@@ -55,12 +60,20 @@ export default function Home() {
           success: true,
           message: 'Website uploaded successfully!',
           url: data.publicUrl,
+          customUrl: data.customUrl,
         });
         
         // Show success toast with the public URL
         toast.success(
           <div>
             <p>Website uploaded successfully!</p>
+            {data.customUrl && (
+              <p className="text-xs mt-1 break-all">
+                <a href={data.customUrl} target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                  {data.customUrl}
+                </a>
+              </p>
+            )}
             <p className="text-xs mt-1 break-all">
               <a href={data.publicUrl} target="_blank" rel="noopener noreferrer" className="underline">
                 {data.publicUrl}
