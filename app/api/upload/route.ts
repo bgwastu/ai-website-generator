@@ -101,20 +101,18 @@ export async function POST(request: NextRequest) {
       console.log('----------------------------------------');
       return NextResponse.json({
         success: true,
-        publicUrl,
-        customUrl: `https://${customDomain}`,
+        url: `https://${customDomain}`,
         projectId: finalProjectId,
       });
     } catch (error) {
       console.error('Custom domain creation error:', error instanceof Error ? error.message : error);
       console.log('CUSTOM DOMAIN CREATION PROCESS FAILED');
       console.log('----------------------------------------');
-      // Return success response with just the R2 URL if custom domain creation fails
+      // Return success response with the R2 URL as fallback if custom domain creation fails
       return NextResponse.json({
         success: true,
-        publicUrl,
+        url: publicUrl,
         projectId: finalProjectId,
-        customDomainError: error instanceof Error ? error.message : 'Unknown error occurred during custom domain creation'
       });
     }
   } catch (error) {

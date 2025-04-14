@@ -21,7 +21,6 @@ export default function Home() {
     success: boolean;
     message: string;
     url?: string;
-    customUrl?: string;
   } | null>(null);
 
   // State to track loading status
@@ -59,26 +58,20 @@ export default function Home() {
         setUploadResult({
           success: true,
           message: 'Website uploaded successfully!',
-          url: data.publicUrl,
-          customUrl: data.customUrl,
+          url: data.url,
         });
         
-        // Show success toast with the public URL
+        // Show success toast with the URL
         toast.success(
           <div>
             <p>Website uploaded successfully!</p>
-            {data.customUrl && (
+            {data.url && (
               <p className="text-xs mt-1 break-all">
-                <a href={data.customUrl} target="_blank" rel="noopener noreferrer" className="underline font-medium">
-                  {data.customUrl}
+                <a href={data.url} target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                  {data.url}
                 </a>
               </p>
             )}
-            <p className="text-xs mt-1 break-all">
-              <a href={data.publicUrl} target="_blank" rel="noopener noreferrer" className="underline">
-                {data.publicUrl}
-              </a>
-            </p>
           </div>
         );
       } else {
@@ -105,6 +98,14 @@ export default function Home() {
       setIsUploading(false);
     }
   }, [currentHtml, projectId]);
+
+  // Callback for successful deletion
+  const handleDeletionSuccess = useCallback(() => {
+    console.log("[Frontend] Project deleted successfully. Clearing state.");
+    setProjectId(null);
+    setUploadResult(null);
+    toast.success("Project deleted successfully.");
+  }, []); // Empty dependency array as it only uses setters
 
   // Log the current HTML state before making requests
   useEffect(() => {
@@ -261,6 +262,7 @@ export default function Home() {
                       onUpload={handleUpload}
                       uploadResult={uploadResult}
                       isPreviewLoading={isLoading} // Pass loading state
+                      onDeleteSuccess={handleDeletionSuccess} // Pass the handler
                     />
                   </div>
                 )}
@@ -345,6 +347,7 @@ export default function Home() {
                onUpload={handleUpload}
                uploadResult={uploadResult}
                isPreviewLoading={isLoading} // Pass loading state
+               onDeleteSuccess={handleDeletionSuccess} // Pass the handler
              />
            </div>
          ) : (

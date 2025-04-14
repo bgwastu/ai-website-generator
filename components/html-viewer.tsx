@@ -10,6 +10,7 @@ interface HtmlViewerProps {
   onUpload: () => void;
   uploadResult: { success: boolean; message: string; url?: string } | null;
   isPreviewLoading: boolean; // Added prop for loading state
+  onDeleteSuccess: () => void; // Callback for successful deletion
 }
 
 // Define the delete function outside the component
@@ -34,7 +35,7 @@ const deleteProject = async (projectId: string) => {
     };
   }
 };
-const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onUpload, uploadResult, isPreviewLoading }) => {
+const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onUpload, uploadResult, isPreviewLoading, onDeleteSuccess }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null); // Ref for modal iframe
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,8 +79,8 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
         <div className="bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 flex-shrink-0 flex justify-between items-center">
           <span>Generated Website Preview</span>
           <div className="flex items-center gap-2">
-            {/* Delete button - only show if projectId exists */}
-            {projectId && (
+            {/* Delete button - only show if project ID exists and upload was successful */}
+            {projectId && uploadResult?.success && uploadResult?.url && (
               <button
                 onClick={async (e) => {
                   e.stopPropagation(); // Prevent modal from opening
@@ -89,6 +90,10 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                     const result = await deleteProject(projectId);
                     setDeleteResult(result);
                     setIsDeleting(false);
+                    // Notify parent on successful deletion
+                    if (result.success) {
+                      onDeleteSuccess();
+                    }
                   }
                 }}
                 className="px-2 py-0.5 rounded text-xs bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
@@ -100,18 +105,33 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
               </button>
             )}
             
-            {/* Upload button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent modal from opening
-                onUpload(); // Call upload directly
-              }}
-              className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isUploading || isDeleting}
-              title="Upload website"
-            >
-              {isUploading ? 'Uploading...' : 'Deploy'}
-            </button>
+            {/* Upload button or Deployed Status */}
+            {!(uploadResult?.success && uploadResult?.url) ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent modal from opening
+                  onUpload(); // Call upload directly
+                }}
+                className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isUploading || isDeleting}
+                title="Deploy website"
+              >
+                {isUploading ? 'Uploading...' : 'Deploy'}
+              </button>
+            ) : (
+              <a 
+                href={uploadResult.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-0.5 rounded text-xs bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
+                title={`View deployed site: ${uploadResult.url}`}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent modal from opening when clicking the link
+                }}
+              >
+                <ExternalLinkIcon size={12} /> Deployed
+              </a>
+            )}
           </div>
         </div>
         {/* Overlay for hover effect */}
@@ -155,8 +175,8 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
             <div className="flex justify-between items-center p-2 border-b border-zinc-200 flex-shrink-0"> {/* Removed dark mode */}
               <span className="text-sm font-medium text-zinc-700">Website Preview</span> {/* Removed dark mode */}
               <div className="flex items-center gap-2">
-                {/* Delete button - only show if projectId exists */}
-                {projectId && (
+                {/* Delete button - only show if project ID exists and upload was successful */}
+                {projectId && uploadResult?.success && uploadResult?.url && (
                   <button
                     onClick={async () => {
                       if (confirm('Are you sure you want to delete this project?')) {
@@ -166,8 +186,10 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                         setDeleteResult(result);
                         setIsDeleting(false);
                         
+                        // Close the modal and notify parent if deletion is successful
                         if (result.success) {
-                          closeModal(); // Close the modal if deletion is successful
+                          onDeleteSuccess();
+                          closeModal(); 
                         }
                       }
                     }}
@@ -180,15 +202,27 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                   </button>
                 )}
                 
-                {/* Upload button */}
-                <button
-                  onClick={onUpload} // Call upload directly
-                  className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isUploading || isDeleting}
-                  title="Upload website"
-                >
-                  {isUploading ? 'Uploading...' : 'Deploy'}
-                </button>
+                {/* Upload button or Deployed Status */}
+                {!(uploadResult?.success && uploadResult?.url) ? (
+                  <button
+                    onClick={onUpload} // Call upload directly
+                    className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUploading || isDeleting}
+                    title="Deploy website"
+                  >
+                    {isUploading ? 'Uploading...' : 'Deploy'}
+                  </button>
+                ) : (
+                  <a 
+                    href={uploadResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 rounded text-sm bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
+                    title={`View deployed site: ${uploadResult.url}`}
+                  >
+                    <ExternalLinkIcon size={14} /> Deployed
+                  </a>
+                )}
                 <button
                   onClick={closeModal}
                   className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200" /* Removed dark mode */
