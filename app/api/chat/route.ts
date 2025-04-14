@@ -1,4 +1,4 @@
-import { streamText, tool, generateText, ToolResult, ToolInvocation } from 'ai'; // Added ToolResult and ToolInvocation
+import { streamText, tool, generateText, ToolResult } from 'ai'; // Removed ToolInvocation import
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
@@ -107,25 +107,25 @@ export async function POST(req: Request) {
             const msg = messages[i];
             console.log(`[HTML Finder] Checking message index ${i}, role: ${msg.role}`);
             
-            // Check for toolInvocations in assistant messages
-            if (msg.role === 'assistant' && msg.toolInvocations && Array.isArray(msg.toolInvocations)) {
-                console.log(`[HTML Finder] Found assistant message with toolInvocations at index ${i}`);
+            // Check for parts in assistant messages (using the newer parts API instead of toolInvocations)
+            if (msg.role === 'assistant' && msg.parts && Array.isArray(msg.parts)) {
+                console.log(`[HTML Finder] Found assistant message with parts at index ${i}`);
                 
-                // Find websiteGenerator tool result
-                const websiteGenResult = msg.toolInvocations.find(
-                    (tool: ToolInvocation) => tool.toolName === 'websiteGenerator' && tool.state === 'result'
+                // Find websiteGenerator tool result in parts
+                const websiteGenPart = msg.parts.find(
+                    (part) =>
+                        part.type === 'tool-invocation' &&
+                        part.toolInvocation.toolName === 'websiteGenerator' &&
+                        part.toolInvocation.state === 'result'
                 );
                 
-                if (websiteGenResult && websiteGenResult.state === 'result') {
-                    console.log(`[HTML Finder] Found websiteGenerator result with state 'result'`);
+                if (websiteGenPart &&
+                    websiteGenPart.type === 'tool-invocation' &&
+                    websiteGenPart.toolInvocation.state === 'result') {
+                    console.log(`[HTML Finder] Found websiteGenerator part with state 'result'`);
                     
-                    // Type assertion for when state is 'result'
-                    type ToolResultInvocation = ToolInvocation & {
-                        state: 'result';
-                        result: any;
-                    };
-                    
-                    const resultData = (websiteGenResult as ToolResultInvocation).result as { htmlContent?: string };
+                    // Access the result from the toolInvocation property
+                    const resultData = websiteGenPart.toolInvocation.result as { htmlContent?: string };
                     if (resultData && resultData.htmlContent) {
                         latestHtml = resultData.htmlContent;
                         console.log(`[HTML Finder] Successfully extracted htmlContent from tool result at index ${i}`);
@@ -134,8 +134,8 @@ export async function POST(req: Request) {
                 }
             }
             
-            // We no longer need to check for legacy 'tool' role messages as they're not part of the AIMessage type
-            // The HTML state is now properly extracted from toolInvocations in assistant messages
+            // We no longer need to check for legacy 'tool' role messages or toolInvocations
+            // The HTML state is now properly extracted from parts in assistant messages
         }
         
         if (!latestHtml) {
