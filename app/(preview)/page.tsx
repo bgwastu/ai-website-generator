@@ -1,6 +1,5 @@
 "use client";
 
-import { VercelIcon } from "@/components/icons";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
@@ -84,17 +83,10 @@ export default function Home() {
               <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200"> {/* Removed dark classes */}
                  <p className="flex flex-row justify-center gap-4 items-center text-zinc-900"> {/* Removed dark class */}
                    {/* Replace icons if desired */}
-                   <VercelIcon size={16} />
                    <span>AI Website Generator</span>
                  </p>
                  <p>
                    Start by describing the website you want to build, or try one of the suggestions below.
-                 </p>
-                 <p>
-                   The AI will ask clarifying questions to gather requirements before generating the HTML.
-                 </p>
-                 <p>
-                   Powered by <Link className="text-blue-500" href="https://sdk.vercel.ai/" target="_blank">Vercel AI SDK</Link> and Anthropic Claude. {/* Removed dark class */}
                  </p>
               </div>
             </motion.div>
