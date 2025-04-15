@@ -3,10 +3,24 @@
 import { motion } from "framer-motion";
 import { BotIcon, UserIcon } from "./icons";
 import { Markdown } from "./markdown"; // Import the Markdown component
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 import HtmlViewer from "./html-viewer"; // Import HtmlViewer
 import { Message as MessageType } from "@ai-sdk/react";
+import Image from "next/image";
+
+// Add a loading indicator component for attachments
+function AttachmentLoadingIndicator() {
+  return (
+    <div className="flex items-center space-x-2 p-3 bg-zinc-50 border border-zinc-200 rounded-md">
+      <svg className="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span className="text-xs text-zinc-600">Processing attachment...</span>
+    </div>
+  );
+}
 
 function getHtmlArtifactFromMessage(message: MessageType) {
   if (!message.parts) return null;
@@ -29,6 +43,23 @@ export const Message = ({ message }: { message: MessageType }) => {
 
   // Extract htmlContent if this message has a website artifact
   const htmlContent = getHtmlArtifactFromMessage(message);
+
+  // Add state for attachment processing
+  const [isProcessingAttachments, setIsProcessingAttachments] = useState(false);
+  
+  // Show loading indicator for new assistant messages for a brief period
+  useEffect(() => {
+    if (role === 'assistant') {
+      setIsProcessingAttachments(true);
+      
+      // After 2.5 seconds, hide the loading indicator
+      const timer = setTimeout(() => {
+        setIsProcessingAttachments(false);
+      }, 2500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [role, message.id]);
 
   // Helper to strip <context>...</context> from user message content
   function stripContextBlock(text: string): string {
@@ -112,6 +143,7 @@ export const Message = ({ message }: { message: MessageType }) => {
 
   return (
     <motion.div
+      id={message.id}
       className={`flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0 first-of-type:pt-20`}
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -130,6 +162,51 @@ export const Message = ({ message }: { message: MessageType }) => {
               )
             : content}
         </div>
+        
+        {/* Show loading indicator when processing attachments */}
+        {isProcessingAttachments && (
+          <div className="mt-2">
+            <AttachmentLoadingIndicator />
+          </div>
+        )}
+        
+        {/* Render image attachments if present */}
+        {message.experimental_attachments && message.experimental_attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {message.experimental_attachments
+              .filter(attachment => 
+                attachment.contentType?.startsWith('image/') || 
+                attachment.contentType === 'application/pdf'
+              )
+              .map((attachment, index) => 
+                attachment.contentType?.startsWith('image/') ? (
+                  <div key={index} className="h-32 w-32 rounded-md overflow-hidden border border-zinc-200" data-attachment="image">
+                    <Image 
+                      src={attachment.url} 
+                      alt={attachment.name || `Image ${index + 1}`}
+                      width={128} 
+                      height={128} 
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : attachment.contentType === 'application/pdf' ? (
+                  <div key={index} className="border border-zinc-200 rounded-md overflow-hidden" data-attachment="pdf">
+                    <div className="bg-blue-50 p-2 text-center">
+                      <span className="text-xs font-medium text-blue-600">PDF: {attachment.name || `Document ${index + 1}`}</span>
+                    </div>
+                    <iframe 
+                      src={attachment.url} 
+                      title={attachment.name || `PDF ${index + 1}`}
+                      width="300"
+                      height="200"
+                      className="border-0"
+                    />
+                  </div>
+                ) : null
+              )}
+          </div>
+        )}
+        
         {/* If this assistant message has a website artifact, show a [WEBSITE UPDATE] chip instead of the HTML */}
         {role === "assistant" && htmlContent && (
           <div className="w-full max-w-[500px] mx-auto mt-2 flex justify-start">

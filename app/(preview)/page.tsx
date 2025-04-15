@@ -4,13 +4,29 @@ import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import HtmlViewer from "@/components/html-viewer";
+import Image from "next/image";
+import { XCircle } from "lucide-react";
+
+// Define the Attachment type
+type Attachment = {
+  name: string;
+  url: string;
+  contentType: string;
+};
 
 export default function Home() {
   // Add state for the current HTML preview
   const [currentHtml, setCurrentHtml] = useState<string>("");
+  
+  // Add state for image attachments
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachmentPreviews, setAttachmentPreviews] = useState<{id: number, url: string, contentType: string}[]>([]);
+  const [isLoadingAttachments, setIsLoadingAttachments] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const { messages, input, setInput, handleSubmit, append, status } = useChat({
     api: "/api/chat",
@@ -44,6 +60,143 @@ export default function Home() {
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
+  // Function to handle file validation
+  const validateAndAddFiles = useCallback((files: FileList | File[]) => {
+    const validFiles: File[] = [];
+    const maxFiles = 5;
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const validTypes = [
+      'image/jpeg', 
+      'image/png', 
+      'image/gif', 
+      'image/webp',
+      'application/pdf' // Add PDF support
+    ];
+    
+    // Check if adding these files would exceed the maximum
+    if (attachments.length + files.length > maxFiles) {
+      toast.error(`You can only attach up to ${maxFiles} files at once.`);
+      return;
+    }
+    
+    // Validate each file
+    Array.from(files).forEach(file => {
+      if (!validTypes.includes(file.type)) {
+        toast.error(`Invalid file type: ${file.name}. Only images and PDFs are allowed.`);
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        toast.error(`File too large: ${file.name}. Maximum size is 10MB.`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    if (validFiles.length > 0) {
+      setAttachments(prev => [...prev, ...validFiles]);
+      
+      // Start loading state
+      setIsLoadingAttachments(true);
+      
+      // Track loading progress
+      let loadedCount = 0;
+      const totalFiles = validFiles.length;
+      
+      // Generate previews for the valid files
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result;
+          if (result) {
+            setAttachmentPreviews(prev => [
+              ...prev, 
+              { 
+                id: Date.now() + Math.random(), // Unique ID for this preview
+                url: result as string,
+                contentType: file.type
+              }
+            ]);
+          }
+          
+          // Check if all files are loaded
+          loadedCount++;
+          if (loadedCount === totalFiles) {
+            setIsLoadingAttachments(false);
+          }
+        };
+        
+        reader.onerror = () => {
+          toast.error(`Failed to read file: ${file.name}`);
+          loadedCount++;
+          if (loadedCount === totalFiles) {
+            setIsLoadingAttachments(false);
+          }
+        };
+        
+        reader.readAsDataURL(file);
+      });
+    }
+  }, [attachments]);
+  
+  // Handle paste events
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData && e.clipboardData.files.length > 0) {
+        e.preventDefault();
+        validateAndAddFiles(e.clipboardData.files);
+      }
+    };
+    
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [validateAndAddFiles]);
+  
+  // Handle drag and drop
+  useEffect(() => {
+    const dropZone = dropZoneRef.current;
+    if (!dropZone) return;
+    
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    };
+    
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+    };
+    
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+      
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        validateAndAddFiles(e.dataTransfer.files);
+      }
+    };
+    
+    dropZone.addEventListener('dragover', handleDragOver);
+    dropZone.addEventListener('dragleave', handleDragLeave);
+    dropZone.addEventListener('drop', handleDrop);
+    
+    return () => {
+      dropZone.removeEventListener('dragover', handleDragOver);
+      dropZone.removeEventListener('dragleave', handleDragLeave);
+      dropZone.removeEventListener('drop', handleDrop);
+    };
+  }, [validateAndAddFiles]);
+  
+  // Remove an attachment by index
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setAttachmentPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Suggestions for quick actions
   const suggestedActions = [
     {
@@ -69,19 +222,8 @@ export default function Home() {
     },
   ];
 
-  // Helper to append current HTML to user message
-  const sendMessageWithHtml = async (userInput: string) => {
-    let content = userInput;
-    if (currentHtml && currentHtml.trim().length > 0) {
-      // Inject the HTML context wrapped in <context> for easier parsing
-      content += `\n\n<context>\n\u0060\u0060\u0060html\n${currentHtml}\n\u0060\u0060\u0060\n</context>`;
-    }
-    await append({ role: "user", content });
-    setInput(""); // Clear the input after sending
-  };
-
   return (
-    <div className=" h-screen">
+    <div className="h-screen" ref={dropZoneRef}>
       {/* Responsive layout: stack on mobile, side-by-side on desktop */}
       <div className="flex flex-col md:flex-row h-screen gap-4 pb-4">
         {/* Main chat area */}
@@ -149,9 +291,39 @@ export default function Home() {
                   >
                     <button
                       onClick={async () => {
-                        await sendMessageWithHtml(action.action);
+                        // Don't process if we're still loading attachments
+                        if (isLoadingAttachments) {
+                          toast.error("Please wait for attachments to finish loading");
+                          return;
+                        }
+                        
+                        // Set the input to the suggestion
+                        setInput(action.action);
+                        
+                        // If we have HTML context, add it
+                        if (currentHtml && currentHtml.trim().length > 0) {
+                          const contentWithContext = action.action + `\n\n<context>\n\u0060\u0060\u0060html\n${currentHtml}\n\u0060\u0060\u0060\n</context>`;
+                          setInput(contentWithContext);
+                          
+                          // Create a mock event
+                          const mockEvent = new Event('submit') as any;
+                          mockEvent.preventDefault = () => {};
+                          
+                          // Use handleSubmit directly
+                          handleSubmit(mockEvent);
+                          setInput("");
+                        } else {
+                          // Create a mock event
+                          const mockEvent = new Event('submit') as any;
+                          mockEvent.preventDefault = () => {};
+                          
+                          // Submit with just the suggestion text
+                          setInput(action.action);
+                          handleSubmit(mockEvent);
+                        }
                       }}
                       className="w-full text-left border border-zinc-200 text-zinc-800 rounded-lg p-2 text-sm hover:bg-zinc-100 transition-colors flex flex-col"
+                      disabled={isLoadingAttachments || status === "streaming" || status === "submitted"}
                     >
                       <span className="font-medium">{action.title}</span>
                       <span className="text-zinc-500">{action.label}</span>
@@ -172,12 +344,107 @@ export default function Home() {
                 />
               )}
             </div>
+            
+            {/* File attachments preview */}
+            {(attachmentPreviews.length > 0 || isLoadingAttachments) && (
+              <div className="flex flex-wrap gap-2 mb-2 w-full md:max-w-[500px] mx-auto">
+                {/* Loading indicator */}
+                {isLoadingAttachments && (
+                  <div className="h-16 w-16 rounded-md overflow-hidden border border-zinc-200 flex items-center justify-center bg-zinc-50">
+                    <div className="animate-pulse flex flex-col items-center">
+                      <svg className="animate-spin h-5 w-5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-xs mt-1 text-zinc-500">Loading</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Attachment previews */}
+                {attachmentPreviews.map((preview, index) => (
+                  <div key={preview.id} className="relative">
+                    <div className="h-16 w-16 rounded-md overflow-hidden border border-zinc-200">
+                      {preview.contentType.startsWith('image/') ? (
+                        <Image 
+                          src={preview.url} 
+                          alt={`Attachment ${index + 1}`}
+                          width={64} 
+                          height={64} 
+                          className="h-full w-full object-cover"
+                        />
+                      ) : preview.contentType === 'application/pdf' ? (
+                        <div className="h-full w-full bg-blue-50 flex items-center justify-center">
+                          <span className="text-xs font-medium text-blue-600">PDF</span>
+                        </div>
+                      ) : (
+                        <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-500">File</span>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeAttachment(index)}
+                      className="absolute -top-2 -right-2 bg-white rounded-full text-red-500"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <form
               className="flex flex-col gap-2 relative items-center"
               onSubmit={async (e) => {
                 e.preventDefault();
-                setInput("");
-                await sendMessageWithHtml(input);
+                
+                // Don't submit if we're still loading attachments
+                if (isLoadingAttachments) {
+                  toast.error("Please wait for attachments to finish loading");
+                  return;
+                }
+                
+                if (currentHtml && currentHtml.trim().length > 0) {
+                  // If we have HTML context, add it to the input content
+                  const contentWithContext = input + `\n\n<context>\n\u0060\u0060\u0060html\n${currentHtml}\n\u0060\u0060\u0060\n</context>`;
+                  setInput(contentWithContext);
+                  
+                  // Use handleSubmit with the context and attachments
+                  handleSubmit(e, {
+                    experimental_attachments: attachmentPreviews.map((preview, index) => {
+                      const file = attachments[index];
+                      if (!file) return null;
+                      
+                      return {
+                        name: file.name,
+                        url: preview.url,
+                        contentType: file.type,
+                      };
+                    }).filter((attachment): attachment is Attachment => attachment !== null)
+                  });
+                  
+                  // Reset the input to its original value without context
+                  setInput("");
+                } else {
+                  // Normal submission with just attachments
+                  handleSubmit(e, {
+                    experimental_attachments: attachmentPreviews.map((preview, index) => {
+                      const file = attachments[index];
+                      if (!file) return null;
+                      
+                      return {
+                        name: file.name,
+                        url: preview.url,
+                        contentType: file.type,
+                      };
+                    }).filter((attachment): attachment is Attachment => attachment !== null)
+                  });
+                }
+                
+                // Clear attachments and previews
+                setAttachments([]);
+                setAttachmentPreviews([]);
               }}
             >
               <div className="relative w-full md:max-w-[500px] flex flex-col items-center gap-2">
@@ -185,16 +452,48 @@ export default function Home() {
                   ref={inputRef}
                   className="bg-zinc-100 rounded-md px-2 py-1.5 w-full outline-none text-zinc-800 max-w-[calc(100dvw-32px)] mx-auto disabled:opacity-50 pr-10"
                   placeholder={
-                    status === "streaming" || status === "submitted"
-                      ? "Loading..."
+                    status === "streaming" || status === "submitted" || isLoadingAttachments
+                      ? isLoadingAttachments 
+                        ? "Loading attachments..."
+                        : "Loading..."
                       : "Send a message..."
                   }
-                  disabled={status === "streaming" || status === "submitted"}
+                  disabled={status === "streaming" || status === "submitted" || isLoadingAttachments}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                 />
+                
+                {/* Hidden file input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      validateAndAddFiles(e.target.files);
+                    }
+                  }}
+                  disabled={isLoadingAttachments}
+                />
+                
+                {/* Attach image button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 ${isLoadingAttachments ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-500 hover:text-zinc-700'}`}
+                  disabled={isLoadingAttachments}
+                >
+                  📎
+                </button>
               </div>
             </form>
+            
+            {/* Drop zone instructions - only visible when dragging */}
+            <div className="text-center text-xs text-zinc-500 mt-1 md:max-w-[500px] mx-auto">
+              Drag & drop images or PDFs, paste from clipboard, or click the paperclip to attach
+            </div>
           </div>
         </div>
         {/* Desktop HTML preview area */}
