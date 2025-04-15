@@ -1,14 +1,5 @@
-import "./globals.css";
-import { Metadata } from "next";
 import { Toaster } from "sonner";
-// Removed: import { AI } from "./actions";
-
-export const metadata: Metadata = {
-  metadataBase: new URL("https://ai-sdk-preview-rsc-genui.vercel.dev"),
-  title: "Generative User Interfaces Preview",
-  description: "Generative UI with React Server Components and Vercel AI SDK",
-};
-
+import "./globals.css";
 export default function RootLayout({
   children,
 }: Readonly<{
