@@ -47,6 +47,7 @@ Here is the template for the HTML:
   <title>Laman.ai - [ADD THE WEBSITE NAME HERE]</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> <!-- Tailwind CSS -->
   <script src="//unpkg.com/alpinejs" defer></script> <!-- Alpine.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"> <!-- FontAwesome -->
 </head>
 <body>
 </body>
@@ -59,6 +60,7 @@ CDN You can use:
 IMPORTANT RESTRICTIONS:
 - ALWAYS USE TAILWIND CSS
 - ALWAYS USE ALPINE.JS FOR INTERACTIVE ELEMENTS AND MODALS
+- ALWAYS USE FONTAWESOME FOR ICONS
 - IF the website containing data, do NOT create your own charts, use Chart.js.
 - Do NOT invent dynamic data (prices, stats, news, etc.) unless explicitly provided.
 - Do NOT use local image paths (e.g., '/img/...') or invent image URLs. DO NOT USE IMAGES.

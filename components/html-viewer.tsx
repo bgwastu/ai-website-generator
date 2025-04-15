@@ -8,34 +8,12 @@ interface HtmlViewerProps {
   htmlContent: string;
   projectId: string | null;
   isUploading: boolean;
-  onUpload: () => void;
+  onDeploy: () => void;
   uploadResult: { success: boolean; message: string; url?: string } | null;
   isPreviewLoading?: boolean; // Optional, deprecated
+  onDelete: (projectId: string) => Promise<{ success: boolean; message: string }>; // New prop for delete function
   onDeleteSuccess: () => void; // Callback for successful deletion
 }
-
-// Define the delete function outside the component
-const deleteProject = async (projectId: string) => {
-  if (!projectId) return { success: false, message: 'No project ID provided' };
-  
-  try {
-    const response = await fetch('/api/delete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ projectId }),
-    });
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Delete error:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred during deletion'
-    };
-  }
-};
 
 // Helper function to inject a script that makes all <a> links open in a new tab
 function injectLinkHandler(html: string): string {
@@ -65,7 +43,7 @@ function injectLinkHandler(html: string): string {
   return html + handlerScript;
 }
 
-const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onUpload, uploadResult, isPreviewLoading = false, onDeleteSuccess }) => {
+const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onDeploy, uploadResult, isPreviewLoading = false, onDelete, onDeleteSuccess }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null); // Ref for modal iframe
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -120,7 +98,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                   if (confirm('Are you sure you want to delete this project?')) {
                     setIsDeleting(true);
                     setDeleteResult(null);
-                    const result = await deleteProject(projectId);
+                    const result = await onDelete(projectId!);
                     setDeleteResult(result);
                     setIsDeleting(false);
                     // Notify parent on successful deletion
@@ -143,7 +121,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
               <button
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent modal from opening
-                  onUpload(); // Call upload directly
+                  onDeploy(); // Call upload directly
                 }}
                 className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isUploading || isDeleting}
@@ -215,7 +193,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                       if (confirm('Are you sure you want to delete this project?')) {
                         setIsDeleting(true);
                         setDeleteResult(null);
-                        const result = await deleteProject(projectId);
+                        const result = await onDelete(projectId!);
                         setDeleteResult(result);
                         setIsDeleting(false);
                         
@@ -238,7 +216,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                 {/* Upload button or Deployed Status */}
                 {!(uploadResult?.success && uploadResult?.url) ? (
                   <button
-                    onClick={onUpload} // Call upload directly
+                    onClick={() => onDeploy()} // Call upload directly -> THIS IS THE ISSUE
                     className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isUploading || isDeleting}
                     title="Deploy website"

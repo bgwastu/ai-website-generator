@@ -15,22 +15,8 @@ export async function POST(req: Request) {
       messages: AIMessage[];
     } = requestBody;
 
-    // Check if messages contain PDF attachments
-    const hasPdfAttachments = messages.some(message => 
-      message.experimental_attachments?.some(
-        attachment => attachment.contentType === 'application/pdf'
-      )
-    );
-
-    // Choose the appropriate model based on attachments
-    // OpenAI's GPT-4o can handle images but not PDFs
-    // Anthropic's Claude can handle both images and PDFs
     const result = streamText({
-      model: hasPdfAttachments
-        ? anthropic('claude-3-5-sonnet-20240620')  // Use Claude for PDF support
-        : openai('gpt-4o', {
-            downloadImages: false, // We're already providing base64 data URLs
-          }),
+      model: anthropic('claude-3-5-sonnet-latest'),
       system: `You are a helpful AI assistant.`,
       messages: messages,
       tools: {
