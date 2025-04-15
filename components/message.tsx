@@ -30,6 +30,12 @@ export const Message = ({ message }: { message: MessageType }) => {
   // Extract htmlContent if this message has a website artifact
   const htmlContent = getHtmlArtifactFromMessage(message);
 
+  // Helper to strip <context>...</context> from user message content
+  function stripContextBlock(text: string): string {
+    // Remove <context>...</context> and any surrounding whitespace
+    return text.replace(/\n?<context>[\s\S]*?<\/context>/g, '').trim();
+  }
+
   // Per-message upload/delete state
   const [projectId, setProjectId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -116,24 +122,21 @@ export const Message = ({ message }: { message: MessageType }) => {
       <div className="flex flex-col gap-1 w-full">
         <div className="flex flex-col gap-4 prose prose-zinc dark:prose-invert prose-sm max-w-none">
           {/* Render content using Markdown component if it's a string */}
-          {typeof content === "string" ? (
-            <Markdown>{content}</Markdown>
-          ) : (
-            content
-          )}
+          {typeof content === "string"
+            ? (
+                role === "user"
+                  ? <Markdown>{stripContextBlock(content)}</Markdown>
+                  : <Markdown>{content}</Markdown>
+              )
+            : content}
         </div>
-        {/* If this message has a website artifact, render the HtmlViewer below the message */}
+        {/* If this assistant message has a website artifact, show a [WEBSITE UPDATE] chip instead of the HTML */}
         {role === "assistant" && htmlContent && (
-          <div className="w-full max-w-[500px] mx-auto mt-2">
-            <HtmlViewer
-              htmlContent={htmlContent}
-              projectId={projectId}
-              isUploading={isUploading}
-              onUpload={handleUpload}
-              uploadResult={uploadResult}
-              isPreviewLoading={isPreviewLoading}
-              onDeleteSuccess={handleDeletionSuccess}
-            />
+          <div className="w-full max-w-[500px] mx-auto mt-2 flex justify-start">
+            {/* Chip-like component for website update */}
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200 shadow-sm">
+              WEBSITE UPDATED!
+            </span>
           </div>
         )}
       </div>

@@ -3,13 +3,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { CloudUploadIcon, ExternalLinkIcon, MaximizeIcon, ToggleLeftIcon, ToggleRightIcon, XIcon, Trash2Icon } from 'lucide-react'; // Import icons for modal, upload, and toggle
   
+// isPreviewLoading is now optional and unused
 interface HtmlViewerProps {
   htmlContent: string;
   projectId: string | null;
   isUploading: boolean;
   onUpload: () => void;
   uploadResult: { success: boolean; message: string; url?: string } | null;
-  isPreviewLoading: boolean; // Added prop for loading state
+  isPreviewLoading?: boolean; // Optional, deprecated
   onDeleteSuccess: () => void; // Callback for successful deletion
 }
 
@@ -35,7 +36,36 @@ const deleteProject = async (projectId: string) => {
     };
   }
 };
-const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onUpload, uploadResult, isPreviewLoading, onDeleteSuccess }) => {
+
+// Helper function to inject a script that makes all <a> links open in a new tab
+function injectLinkHandler(html: string): string {
+  // This script listens for clicks on <a> tags and opens them in a new tab
+  const handlerScript = `
+    <script>
+      // This script ensures all <a> links open in a new tab
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function(e) {
+          // Find the closest <a> tag if any
+          let target = e.target;
+          while (target && target.tagName !== 'A') {
+            target = target.parentElement;
+          }
+          if (target && target.tagName === 'A' && target.href && !target.target) {
+            e.preventDefault();
+            window.open(target.href, '_blank');
+          }
+        });
+      });
+    </script>
+  `;
+  // Inject the script before </body> if present, else append to the end
+  if (html.includes('</body>')) {
+    return html.replace('</body>', handlerScript + '</body>');
+  }
+  return html + handlerScript;
+}
+
+const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onUpload, uploadResult, isPreviewLoading = false, onDeleteSuccess }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null); // Ref for modal iframe
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,6 +73,9 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
   const [portalHeight, setPortalHeight] = useState<string>('100%'); // Changed to 100% height for full-height display
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Use the helper to inject the link handler script into the HTML content
+  const safeHtmlContent = injectLinkHandler(htmlContent);
 
   // Function to open the modal
   const openModal = () => setIsModalOpen(true);
@@ -150,7 +183,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
         <div className="flex-grow overflow-auto"> {/* Added wrapper div with flex-grow */}
           <iframe
             ref={iframeRef}
-            srcDoc={htmlContent}
+            srcDoc={safeHtmlContent}
             title="Generated Website Preview Portal"
             sandbox="allow-scripts allow-same-origin"
             width="100%"
@@ -237,7 +270,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
             <div className="flex-grow overflow-auto relative"> {/* Added relative positioning */}
               <iframe
                 ref={modalIframeRef}
-                srcDoc={htmlContent}
+                srcDoc={safeHtmlContent}
                 title="Generated Website Preview Full"
                 sandbox="allow-scripts allow-same-origin"
                 width="100%"

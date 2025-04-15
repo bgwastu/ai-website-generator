@@ -14,17 +14,13 @@ export async function POST(req: Request) {
       messages: AIMessage[];
     } = requestBody;
 
-    // Modify the system prompt to include instructions about the HTML
-    const systemPrompt = `You are a helpful AI assistant.`;
-
     const result = streamText({
-      model: openai("gpt-4.1"),
-      system: systemPrompt,
+      model: openai("gpt-4o"),
+      system: `You are a helpful AI assistant.`,
       messages,
       tools: {
         websiteGenerator,
       },
-      maxSteps: 3,
       onError: (error) => {
         console.error("Error during main streamText:", error);
       },
