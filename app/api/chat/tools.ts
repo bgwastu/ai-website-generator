@@ -24,13 +24,18 @@ Note:
       .describe(
         'Specific instructions based on the latest user input for how to update the website (e.g., "Update the overview section with this summary", "Change the main title to \'Project Dashboard\'").'
       ),
+    context: z
+      .string()
+      .describe(
+        "Context about the website, including the user's requirements and any relevant information."
+      ),
   }),
-  execute: async ({ currentHtml, updateInstructions }) => {
+  execute: async ({ currentHtml, updateInstructions, context }) => {
     console.log("[websiteGenerator] Entering execute");
 
     try {
       const { text } = await generateText({
-        model: openai("gpt-4.1"),
+        model: openai("gpt-4.1-mini"),
         system: `You are an AI assistant responsible for generating or updating a complete HTML document based on user instructions.
 
 If 'Current HTML' is null or empty, generate the initial HTML based *only* on the 'Update Instructions'.
@@ -61,6 +66,8 @@ IMPORTANT RESTRICTIONS:
 - ALWAYS USE TAILWIND CSS
 - ALWAYS USE ALPINE.JS FOR INTERACTIVE ELEMENTS AND MODALS
 - ALWAYS USE FONTAWESOME FOR ICONS
+- PRESERVE THE EXISTING HTML STRUCTURE unless the user asks for a complete rebuild.
+- If the user asks for changing the section, only change the section requested. Do not change other sections or even remove them.
 - IF the website containing data, do NOT create your own charts, use Chart.js.
 - Do NOT invent dynamic data (prices, stats, news, etc.) unless explicitly provided.
 - Do NOT use local image paths (e.g., '/img/...') or invent image URLs. DO NOT USE IMAGES.
@@ -73,16 +80,24 @@ ${
     : "null (Generate initial HTML based on instructions)"
 }
 
-Update Instructions: ${updateInstructions}`,
+Update Instructions: ${updateInstructions}
+
+Context: ${context}`,
       });
 
       // Remove code block markers if present (e.g., ```html ... ```)
       let cleanedText = text.trim();
       // Regex to remove leading/trailing ```html or ```
-      cleanedText = cleanedText.replace(/^```html\s*|^```\s*|\s*```$/gim, "").trim();
+      cleanedText = cleanedText
+        .replace(/^```html\s*|^```\s*|\s*```$/gim, "")
+        .trim();
 
       // If the AI did not return valid HTML, return the previous HTML and an error.
-      if (!cleanedText || typeof cleanedText !== "string" || cleanedText.trim() === "") {
+      if (
+        !cleanedText ||
+        typeof cleanedText !== "string" ||
+        cleanedText.trim() === ""
+      ) {
         console.warn(
           "[websiteGenerator] AI did not return valid HTML content. Returning previous HTML."
         );
