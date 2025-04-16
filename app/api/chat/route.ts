@@ -1,5 +1,4 @@
 import { openai } from "@ai-sdk/openai";
-import { anthropic } from "@ai-sdk/anthropic"; // Import Anthropic for PDF support
 import { Message as AIMessage } from "@ai-sdk/react"; // Import Message type
 import { streamText } from "ai"; // Removed ToolInvocation import
 import { websiteGenerator } from "./tools";
@@ -16,7 +15,7 @@ export async function POST(req: Request) {
     } = requestBody;
 
     const result = streamText({
-      model: anthropic('claude-3-5-sonnet-latest'),
+      model: openai('gpt-4o-mini'),
       system: `You are a helpful AI assistant.`,
       messages: messages,
       tools: {
