@@ -390,15 +390,15 @@ export default function Home() {
             {messages.length === 0 && (
               <motion.div className="h-[350px] w-full md:w-[500px] pt-20">
                 <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">
-                  <p className="flex flex-col justify-center gap-4 items-center text-zinc-900">
-                    <span className="text-lg font-bold">
+                  <div className="flex flex-col justify-center gap-4 items-center text-zinc-900">
+                    <p className="text-lg font-bold">
                       AI Website Generator
-                    </span>
+                    </p>
                     <p className="text-center">
                       Start by describing the website you want to build, or try
                       one of the suggestions below.
                     </p>
-                  </p>
+                  </div>
                 </div>
               </motion.div>
             )}

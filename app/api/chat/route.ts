@@ -13,10 +13,10 @@ export async function POST(req: Request) {
     } = requestBody;
 
     const result = streamText({
-      model: openai('gpt-4o-mini'),
+      model: openai("gpt-4.1-mini"),
       system: `You are a helpful AI assistant.`,
       messages: messages,
-      maxSteps: 3,
+      maxSteps: 5,
       tools: {
         websiteGenerator,
       },
