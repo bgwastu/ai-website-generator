@@ -44,16 +44,15 @@ Note:
       .enum(["initial", "update"])
       .describe(
         "The status of the website. If you need to start from scratch, set this to 'initial'. If you need to update the website, set this to 'update'."
-      ),
+      ).default("initial"),
     context: z
       .string()
       .describe(
         "Raw content to be displayed on the website, such as extracted text or data from PDFs, documents, or any other source. This content will be used to generate or update the website's sections as needed. MAKE SURE TO INCLUDE ALL THE RAW CONTENT IN THE CONTEXT."
-      ),
+      ).default(""),
   }),
   execute: async ({ currentHtml, updateInstructions, context, status }) => {
     try {
-      console.log("starting to generate website...");
       let result = await generateText({
         model: openai("gpt-4.1-mini"),
         system: `IMPORTANT: You are an expert website generator tool. You must follow these requirements EXACTLY:
@@ -63,6 +62,8 @@ Note:
 - Use Alpine.js for all interactivity and modals.
 - If the website contains data or needs charts, ALWAYS use Chart.js (via CDN) for all charts.
 - Use FontAwesome for icons.
+- For any diagrams, ALWAYS use Mermaid.js via CDN (https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js). DO NOT use any other diagram libraries.
+- DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT use external images, image URLs, or local image paths. DO NOT use <img> tags or any images.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
 - PRESERVE the existing HTML structure unless a full rebuild is requested.
@@ -83,28 +84,23 @@ Here is the context from User:
 ${context}`,
       });
 
-      console.log("generated website...");
-
       if (status === "update") {
-        console.log("Updating website...");
-        // PATCH: Use a new prompt to instruct the AI to update only the relevant parts
         result = await generateText({
-          model: openai("gpt-4.1-nano"),
+          model: openai("gpt-4.1-mini"),
           system: `IMPORTANT: You are an expert website patching tool. You must follow these requirements EXACTLY:
 
 - You are given the current HTML of a single-page website and a user request to update or modify it.
 - Your job is to update ONLY the relevant parts of the HTML as requested, preserving all other content, structure, and code from previous HTML
 - DO NOT remove or alter unrelated sections.
 - Use Tailwind CSS, Alpine.js, and FontAwesome as needed, but do not add unnecessary code.
+- For any diagrams, ALWAYS use Mermaid.js via CDN (https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js). DO NOT use any other diagram libraries.
+- DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
 - Make sure to not remove any existing code, only update the relevant parts based on the instructions.
 - The output MUST be FULL HTML code in HTML format without any \`\`\`html or \`\`\` tags.`,
           prompt: `Current HTML:\n${currentHtml}\n\nUpdated HTML:\n${updateInstructions}\n\nUser Instructions:\n${updateInstructions}`,
         });
       }
-
-      console.log("finished website...");
-      console.log("result: ", result.text);
 
       return {
         success: true,
