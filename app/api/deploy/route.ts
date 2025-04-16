@@ -2,10 +2,10 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
-// API key for laman.ai - Ensure this is securely managed, e.g., via environment variables
-const LAMAN_API_KEY =
-  process.env.LAMAN_API_KEY ||
-  "REMOVED_API_KEY<<";
+const LAMAN_API_KEY = process.env.LAMAN_API_KEY;
+if (!LAMAN_API_KEY) {
+  console.error('LAMAN_API_KEY environment variable is not set');
+}
 
 // Initialize S3 client with R2 configuration
 // Ensure R2 environment variables are set: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
