@@ -72,6 +72,7 @@ Note:
 - Use FontAwesome for icons.
 - For any diagrams, ALWAYS use Mermaid.js via CDN. DO NOT use any other diagram libraries. Make sure you generate best mermaid code without any errors.
 - When adding Mermaid diagrams, ALWAYS use <pre class="mermaid">...</pre> blocks. DO NOT use <script type="module"> or ESM imports for Mermaid. Mermaid is already included and initialized via CDN; you only need to output the correct <pre class="mermaid">...</pre> blocks.
+- All Mermaid diagrams MUST be strictly compatible with Mermaid.js version 11.6.0. Double-check for syntax errors and do not use any features not supported in this version.
 - DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT use external images, image URLs, or local image paths. DO NOT use <img> tags or any images.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
@@ -104,6 +105,7 @@ ${context}`,
 - Use Tailwind CSS, Alpine.js, and FontAwesome as needed, but do not add unnecessary code.
 - For any diagrams, ALWAYS use Mermaid.js via CDN (https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js). DO NOT use any other diagram libraries.
 - When adding Mermaid diagrams, ALWAYS use <pre class="mermaid">...</pre> blocks. DO NOT use <script type="module"> or ESM imports for Mermaid. Mermaid is already included and initialized via CDN; you only need to output the correct <pre class="mermaid">...</pre> blocks.
+- All Mermaid diagrams MUST be strictly compatible with Mermaid.js version 11.6.0. Double-check for syntax errors and do not use any features not supported in this version.
 - DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
 - Make sure to not remove any existing code, only update the relevant parts based on the instructions.
