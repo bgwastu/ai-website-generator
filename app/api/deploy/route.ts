@@ -21,7 +21,6 @@ const s3Client = new S3Client({
 const bucketName = process.env.R2_BUCKET_NAME!;
 const publicUrlBase = process.env.NEXT_PUBLIC_R2_PUBLIC_URL!; // Base URL for public access
 
-// --- Helper Functions (from previous upload route) ---
 
 const adjectives = [
   'amazing', 'brave', 'calm', 'daring', 'eager', 'fast', 'gentle', 'happy',
@@ -39,7 +38,6 @@ const nouns = [
   'avenue', 'path', 'journey', 'quest', 'venture', 'mission', 'project'
 ];
 
-// Generate a readable project ID in the format "test-adjective-noun-number"
 function generateProjectId(): string {
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
@@ -48,8 +46,6 @@ function generateProjectId(): string {
   return `test-${randomAdjective}-${randomNoun}-${randomNumber}`;
 }
 
-
-// --- API Handlers ---
 
 // POST Handler for Deploying/Uploading
 export async function POST(request: NextRequest) {
@@ -211,9 +207,6 @@ export async function DELETE(request: NextRequest) {
       lamanMessage = 'Project deleted from storage, but encountered an error removing custom domain.';
     }
 
-    // Return overall success status
-    // Note: We return success=true even if only R2 deletion worked,
-    // but the message reflects the outcome.
     return NextResponse.json({
       success: true, // Consider if this should be false if laman fails
       message: lamanMessage,
