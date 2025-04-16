@@ -63,7 +63,7 @@ Note:
 - Use Alpine.js for all interactivity and modals.
 - If the website contains data or needs charts, ALWAYS use Chart.js (via CDN) for all charts.
 - Use FontAwesome for icons.
-- For any diagrams, ALWAYS use Mermaid.js via CDN. DO NOT use any other diagram libraries.
+- For any diagrams, ALWAYS use Mermaid.js via CDN. DO NOT use any other diagram libraries. Make sure you generate best mermaid code without any errors.
 - DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT use external images, image URLs, or local image paths. DO NOT use <img> tags or any images.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
