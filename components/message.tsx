@@ -105,8 +105,9 @@ export const Message = ({
             content
           )}
         </div>
+
         {/* Loader for tool invocation (website generation) */}
-        {websiteLoading && (
+        {(websiteLoading || content.trim() === "") && (
           <TextShimmer className="font-mono text-sm" duration={1.5}>
             Generating website...
           </TextShimmer>
