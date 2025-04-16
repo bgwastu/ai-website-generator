@@ -10,8 +10,9 @@ const htmlTemplate = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Laman.ai - [ADD THE WEBSITE NAME HERE]</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script> <!-- Tailwind CSS -->
-  <script src="//unpkg.com/alpinejs" defer></script> <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script> <!-- Alpine.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"> <!-- FontAwesome -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script> <!-- Mermaid.js -->
 </head>
 <body>
 </body>
@@ -62,7 +63,7 @@ Note:
 - Use Alpine.js for all interactivity and modals.
 - If the website contains data or needs charts, ALWAYS use Chart.js (via CDN) for all charts.
 - Use FontAwesome for icons.
-- For any diagrams, ALWAYS use Mermaid.js via CDN (https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js). DO NOT use any other diagram libraries.
+- For any diagrams, ALWAYS use Mermaid.js via CDN. DO NOT use any other diagram libraries.
 - DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
 - DO NOT use external images, image URLs, or local image paths. DO NOT use <img> tags or any images.
 - DO NOT invent or make up content. Only use what is provided in the context and instructions.
