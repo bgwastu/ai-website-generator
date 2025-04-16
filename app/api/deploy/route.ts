@@ -1,5 +1,4 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 const LAMAN_API_KEY = process.env.LAMAN_API_KEY;
@@ -49,9 +48,7 @@ function generateProjectId(): string {
 
 // POST Handler for Deploying/Uploading
 export async function POST(request: NextRequest) {
-  console.log('Deploy API (POST) called');
   try {
-    // Basic validation for essential config
     if (!bucketName || !publicUrlBase || !LAMAN_API_KEY) {
       console.error('Server configuration error: Missing R2/Laman config');
       return NextResponse.json(
@@ -137,9 +134,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE Handler for Deleting a Deployment
 export async function DELETE(request: NextRequest) {
-  console.log('Deploy API (DELETE) called');
   try {
-    // Basic validation for essential config
     if (!bucketName || !LAMAN_API_KEY) {
       console.error('Server configuration error: Missing R2/Laman config');
       return NextResponse.json(
@@ -180,7 +175,6 @@ export async function DELETE(request: NextRequest) {
 
     // 2. Remove Custom Domain via Laman.ai API
     console.log(`Calling laman.ai API to remove domain: ${customDomain}`);
-    let lamanSuccess = false;
     let lamanMessage = 'Attempted to remove custom domain.';
     try {
       const response = await fetch('https://laman.ai/remove-domain', {
@@ -196,7 +190,6 @@ export async function DELETE(request: NextRequest) {
 
       if (response.ok) {
         console.log('Custom domain removal successful via Laman.ai');
-        lamanSuccess = true;
         lamanMessage = 'Project deleted successfully (including custom domain).';
       } else {
         console.error('Failed to remove custom domain via Laman.ai:', data);

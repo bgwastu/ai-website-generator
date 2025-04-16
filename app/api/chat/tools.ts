@@ -32,8 +32,6 @@ Note:
       ),
   }),
   execute: async ({ currentHtml, updateInstructions, context }) => {
-    console.log("[websiteGenerator] Entering execute");
-
     try {
       const { text } = await generateText({
         model: openai("gpt-4.1-mini"),
@@ -86,14 +84,11 @@ Update Instructions: ${updateInstructions}
 Context: ${context}`,
       });
 
-      // Remove code block markers if present (e.g., ```html ... ```)
       let cleanedText = text.trim();
-      // Regex to remove leading/trailing ```html or ```
       cleanedText = cleanedText
         .replace(/^```html\s*|^```\s*|\s*```$/gim, "")
         .trim();
 
-      // If the AI did not return valid HTML, return the previous HTML and an error.
       if (
         !cleanedText ||
         typeof cleanedText !== "string" ||
@@ -108,7 +103,6 @@ Context: ${context}`,
         };
       }
 
-      // Now generate the summary of changes
       const { text: summaryText } = await generateText({
         model: openai("gpt-4.1-mini"),
         system: `You are an AI assistant that summarizes website changes for the user. Given the previous HTML, the new HTML, and the update instructions, write a clear, concise, and creative summary of what was changed. Do not include raw HTML in your summary.`,
@@ -117,7 +111,6 @@ Context: ${context}`,
         }\n\nNew HTML:\n${cleanedText}\n\nUpdate Instructions: ${updateInstructions}`,
       });
 
-      console.log("[websiteGenerator] Returning generated HTML");
       return { htmlContent: cleanedText, summary: summaryText.trim() };
     } catch (error) {
       console.error("[websiteGenerator] Error during direct AI call:", error);

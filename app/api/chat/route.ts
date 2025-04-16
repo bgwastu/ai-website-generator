@@ -1,12 +1,10 @@
 import { openai } from "@ai-sdk/openai";
-import { Message as AIMessage } from "@ai-sdk/react"; // Import Message type
-import { streamText } from "ai"; // Removed ToolInvocation import
+import { Message as AIMessage } from "@ai-sdk/react";
+import { streamText } from "ai";
 import { websiteGenerator } from "./tools";
 
 export async function POST(req: Request) {
-  console.log("Entering POST /api/chat");
   try {
-    // Parse the request body once
     const requestBody = await req.json();
     const {
       messages,

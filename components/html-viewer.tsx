@@ -1,29 +1,27 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { CloudUploadIcon, ExternalLinkIcon, MaximizeIcon, ToggleLeftIcon, ToggleRightIcon, XIcon, Trash2Icon } from 'lucide-react'; // Import icons for modal, upload, and toggle
-  
-// isPreviewLoading is now optional and unused
+import { CloudUploadIcon, ExternalLinkIcon, MaximizeIcon, ToggleLeftIcon, ToggleRightIcon, XIcon, Trash2Icon } from 'lucide-react';
+
 interface HtmlViewerProps {
   htmlContent: string;
   projectId: string | null;
   isUploading: boolean;
   onDeploy: () => void;
   uploadResult: { success: boolean; message: string; url?: string } | null;
-  isPreviewLoading?: boolean; // Optional, deprecated
-  onDelete: (projectId: string) => Promise<{ success: boolean; message: string }>; // New prop for delete function
-  onDeleteSuccess: () => void; // Callback for successful deletion
+  isPreviewLoading?: boolean;
+  onDelete: (projectId: string) => Promise<{ success: boolean; message: string }>;
+  onDeleteSuccess: () => void;
 }
 
-// Helper function to inject a script that makes all <a> links open in a new tab
 function injectLinkHandler(html: string): string {
-  // This script listens for clicks on <a> tags and opens them in a new tab
+
   const handlerScript = `
     <script>
-      // This script ensures all <a> links open in a new tab
+
       document.addEventListener('DOMContentLoaded', function() {
         document.body.addEventListener('click', function(e) {
-          // Find the closest <a> tag if any
+
           let target = e.target;
           while (target && target.tagName !== 'A') {
             target = target.parentElement;
@@ -36,7 +34,7 @@ function injectLinkHandler(html: string): string {
       });
     </script>
   `;
-  // Inject the script before </body> if present, else append to the end
+
   if (html.includes('</body>')) {
     return html.replace('</body>', handlerScript + '</body>');
   }
@@ -45,63 +43,66 @@ function injectLinkHandler(html: string): string {
 
 const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploading, onDeploy, uploadResult, isPreviewLoading = false, onDelete, onDeleteSuccess }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const modalIframeRef = useRef<HTMLIFrameElement>(null); // Ref for modal iframe
+  const modalIframeRef = useRef<HTMLIFrameElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  // Removed isUploadModalOpen and isDeployEnabled states
-  const [portalHeight, setPortalHeight] = useState<string>('100%'); // Changed to 100% height for full-height display
+
+  const [portalHeight, setPortalHeight] = useState<string>('100%');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Use the helper to inject the link handler script into the HTML content
   const safeHtmlContent = injectLinkHandler(htmlContent);
 
-  // Function to open the modal
   const openModal = () => setIsModalOpen(true);
-  // Function to close the modal
+
   const closeModal = () => setIsModalOpen(false);
 
-  // Effect to calculate portal iframe height (optional, could keep fixed)
-
-  // useEffect(() => {
-  //   // Simplified: Using fixed height for portal iframe for consistency
-  //   // Calculation logic could be added back if dynamic portal height is desired
-  // }, [htmlContent]);
-
-  // Effect to handle body scroll lock when modal is open
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
-    // Cleanup function to reset overflow when component unmounts
+
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [isModalOpen]);
 
+  useEffect(() => {
+    if (!isModalOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isModalOpen]);
+
   return (
     <>
-      {/* Portal View */}
+
       <div
-        className="w-full h-full border rounded-md overflow-hidden border-zinc-200 cursor-pointer group relative flex flex-col" /* Removed dark mode, added h-full and flex-col */
+        className="w-full h-full border rounded-md overflow-hidden border-zinc-200 cursor-pointer group relative flex flex-col"
         onClick={openModal}
       >
         <div className="bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 flex-shrink-0 flex justify-between items-center">
           <span>Generated Website Preview</span>
           <div className="flex items-center gap-2">
-            {/* Delete button - only show if project ID exists and upload was successful */}
+
             {projectId && uploadResult?.success && uploadResult?.url && (
               <button
                 onClick={async (e) => {
-                  e.stopPropagation(); // Prevent modal from opening
+                  e.stopPropagation();
                   if (confirm('Are you sure you want to delete this project?')) {
                     setIsDeleting(true);
                     setDeleteResult(null);
                     const result = await onDelete(projectId!);
                     setDeleteResult(result);
                     setIsDeleting(false);
-                    // Notify parent on successful deletion
+
                     if (result.success) {
                       onDeleteSuccess();
                     }
@@ -115,13 +116,12 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             )}
-            
-            {/* Upload button or Deployed Status */}
+
             {!(uploadResult?.success && uploadResult?.url) ? (
               <button
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent modal from opening
-                  onDeploy(); // Call upload directly
+                  e.stopPropagation();
+                  onDeploy();
                 }}
                 className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isUploading || isDeleting}
@@ -130,14 +130,14 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                 {isUploading ? 'Uploading...' : 'Deploy'}
               </button>
             ) : (
-              <a 
+              <a
                 href={uploadResult.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-2 py-0.5 rounded text-xs bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
                 title={`View deployed site: ${uploadResult.url}`}
                 onClick={(e) => {
-                  e.stopPropagation(); // Prevent modal from opening when clicking the link
+                  e.stopPropagation();
                 }}
               >
                 <ExternalLinkIcon size={12} /> Deployed
@@ -145,48 +145,46 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
             )}
           </div>
         </div>
-        {/* Overlay for hover effect */}
-        {/* Overlay for hover effect */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity duration-200 flex items-center justify-center pointer-events-none"> {/* Added pointer-events-none */}
+
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
            <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 text-sm bg-black bg-opacity-50 px-2 py-1 rounded">
              <MaximizeIcon size={14} /> Click to enlarge
            </span>
         </div>
-        {/* Stale Indicator Overlay */}
+
         {isPreviewLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center pointer-events-none">
             <span className="text-zinc-700 text-sm font-medium animate-pulse">Generating new preview...</span>
           </div>
         )}
-        <div className="flex-grow overflow-auto"> {/* Added wrapper div with flex-grow */}
+        <div className="flex-grow overflow-auto">
           <iframe
             ref={iframeRef}
             srcDoc={safeHtmlContent}
             title="Generated Website Preview Portal"
             sandbox="allow-scripts allow-same-origin"
             width="100%"
-            height="100%" /* Changed to 100% height */
-            style={{ border: 'none', pointerEvents: 'none' }} /* Removed height from style */
-            scrolling="auto" /* Changed to auto to allow scrolling */
+            height="100%"
+            style={{ border: 'none', pointerEvents: 'none' }}
+            scrolling="auto"
           />
         </div>
       </div>
 
-      {/* Modal View */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4" /* Kept dark overlay for modal */
-          onClick={closeModal} // Close modal on backdrop click
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
+          onClick={closeModal}
         >
           <div
-            className="relative bg-white w-full h-full rounded-lg shadow-xl overflow-hidden flex flex-col" /* Removed dark mode */
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal content
+            className="relative bg-white w-full h-full rounded-lg shadow-xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-2 border-b border-zinc-200 flex-shrink-0"> {/* Removed dark mode */}
-              <span className="text-sm font-medium text-zinc-700">Website Preview</span> {/* Removed dark mode */}
+
+            <div className="flex justify-between items-center p-2 border-b border-zinc-200 flex-shrink-0">
+              <span className="text-sm font-medium text-zinc-700">Website Preview</span>
               <div className="flex items-center gap-2">
-                {/* Delete button - only show if project ID exists and upload was successful */}
+
                 {projectId && uploadResult?.success && uploadResult?.url && (
                   <button
                     onClick={async () => {
@@ -196,11 +194,10 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                         const result = await onDelete(projectId!);
                         setDeleteResult(result);
                         setIsDeleting(false);
-                        
-                        // Close the modal and notify parent if deletion is successful
+
                         if (result.success) {
                           onDeleteSuccess();
-                          closeModal(); 
+                          closeModal();
                         }
                       }
                     }}
@@ -212,11 +209,10 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                     {isDeleting ? 'Deleting...' : 'Delete'}
                   </button>
                 )}
-                
-                {/* Upload button or Deployed Status */}
+
                 {!(uploadResult?.success && uploadResult?.url) ? (
                   <button
-                    onClick={() => onDeploy()} // Call upload directly -> THIS IS THE ISSUE
+                    onClick={() => onDeploy()}
                     className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isUploading || isDeleting}
                     title="Deploy website"
@@ -224,7 +220,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                     {isUploading ? 'Uploading...' : 'Deploy'}
                   </button>
                 ) : (
-                  <a 
+                  <a
                     href={uploadResult.url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -236,26 +232,25 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
                 )}
                 <button
                   onClick={closeModal}
-                  className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200" /* Removed dark mode */
+                  className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200"
                   aria-label="Close preview"
                 >
                   <XIcon size={18} />
                 </button>
               </div>
             </div>
-            {/* Modal Content (Iframe) */}
-            {/* Modal Content (Iframe) */}
-            <div className="flex-grow overflow-auto relative"> {/* Added relative positioning */}
+
+            <div className="flex-grow overflow-auto relative">
               <iframe
                 ref={modalIframeRef}
                 srcDoc={safeHtmlContent}
                 title="Generated Website Preview Full"
                 sandbox="allow-scripts allow-same-origin"
                 width="100%"
-                height="100%" // Fill the available space
+                height="100%"
                 style={{ border: 'none' }}
               />
-              {/* Stale Indicator Overlay for Modal */}
+
               {isPreviewLoading && (
                 <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center pointer-events-none">
                   <span className="text-zinc-700 text-sm font-medium animate-pulse">Generating new preview...</span>
@@ -266,7 +261,6 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({ htmlContent, projectId, isUploa
         </div>
       )}
 
-      {/* Removed Upload Modal */}
     </>
   );
 };

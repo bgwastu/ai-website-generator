@@ -1,16 +1,15 @@
 "use client";
 
+import HtmlViewer from "@/components/html-viewer";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { useRef, useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import HtmlViewer from "@/components/html-viewer";
+import { AlertTriangle, PaperclipIcon, RotateCcw, XCircle } from "lucide-react";
 import Image from "next/image";
-import { PaperclipIcon, XCircle, RotateCcw, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-// Define the Attachment type
 type Attachment = {
   name: string;
   url: string;
@@ -18,10 +17,8 @@ type Attachment = {
 };
 
 export default function Home() {
-  // Add state for the current HTML preview
   const [currentHtml, setCurrentHtml] = useState<string>("");
 
-  // Add state for image attachments
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<
     { id: number; url: string; contentType: string }[]
@@ -30,7 +27,6 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // Add state for website deployment
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
@@ -55,10 +51,9 @@ export default function Home() {
       console.error("Chat error:", error);
       toast.error(`An error occurred: ${error.message}`);
     },
-    // Listen for new assistant messages to update the HTML preview
     onFinish: (message) => {
-      // Find HTML in the message (if any)
-      let newHtmlContent: string | null = null; // Variable to hold newly found HTML
+      let newHtmlContent: string | null = null;
+
       if (message.parts) {
         for (const part of message.parts) {
           if (
@@ -68,25 +63,17 @@ export default function Home() {
             part.toolInvocation.result &&
             typeof part.toolInvocation.result.htmlContent === "string"
           ) {
-            newHtmlContent = part.toolInvocation.result.htmlContent; // Store the new HTML
-            break; // Assuming only one HTML part per message
+            newHtmlContent = part.toolInvocation.result.htmlContent;
+            break;
           }
         }
       }
 
-      // After processing parts, check if we found new HTML
       if (newHtmlContent !== null) {
-        // Update state only if new HTML was found
         setCurrentHtml(newHtmlContent);
 
-        // AND check if a project already exists for auto-redeploy
         if (projectId) {
-          console.log(
-            "New HTML found and project exists, triggering automatic re-deploy..."
-          );
-          // Call deployWebsite directly, passing the new HTML
           deployWebsite(newHtmlContent);
-          // Show a specific toast for automatic updates
           toast.info("Website automatically updated with latest changes.");
         }
       }
@@ -97,21 +84,9 @@ export default function Home() {
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
-  // Function to deploy the website
   const deployWebsite = async (htmlToDeploy?: string) => {
-    // Use provided HTML or fall back to state. Validate that we have content.
     const content = htmlToDeploy || currentHtml;
 
-    // --- DEBUG LOGGING START ---
-    console.log("--- Deploy Website Called ---");
-    console.log("Value of htmlToDeploy:", htmlToDeploy);
-    console.log("Value of currentHtml (state):", currentHtml);
-    console.log("Type of currentHtml (state):", typeof currentHtml);
-    console.log("Calculated content value:", content);
-    console.log("Type of calculated content:", typeof content);
-    // --- DEBUG LOGGING END ---
-
-    // Explicit type check before using .trim()
     if (typeof content !== "string") {
       console.error(
         "Deployment error: Content is not a string. Value:",
@@ -121,45 +96,38 @@ export default function Home() {
       return;
     }
 
-    // Now we know content is a string, proceed with the trim check
     if (!content || content.trim() === "") {
       toast.error("No website content to deploy");
       return;
     }
 
-    // If called manually (no argument passed), show standard "Deploying..." toast
     if (!htmlToDeploy) {
       toast.info("Deploying website...");
     }
-    // For automatic deploys (argument passed), a toast is shown in onFinish
 
     setIsUploading(true);
-    setUploadResult(null); // Clear previous result
+    setUploadResult(null);
 
     try {
-      // Use the new /api/deploy endpoint with POST method
       const response = await fetch("/api/deploy", {
-        // Updated endpoint
-        method: "POST", // Explicitly POST
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          htmlContent: content, // Use the determined content
-          projectId: projectId, // Pass existing projectId if we have one
+          htmlContent: content,
+          projectId: projectId,
         }),
       });
 
       const result = await response.json();
-      setUploadResult(result); // Store the entire result object
+      setUploadResult(result);
 
       if (result.success) {
-        // Update projectId if it was newly generated
         if (result.projectId) {
           setProjectId(result.projectId);
         }
 
-        // Define a simple component for the success toast content
         const DeploySuccessToast = ({
           message,
           url,
@@ -175,7 +143,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-                onClick={(e) => e.stopPropagation()} // Prevent toast from closing on link click
+                onClick={(e) => e.stopPropagation()}
               >
                 {url}
               </a>
@@ -183,10 +151,9 @@ export default function Home() {
           </div>
         );
 
-        // Use the component in the toast
         const baseMessage = result.message?.includes("successfully")
-          ? result.message.split("URL")[0].trim() // Try to extract base message if URL was part of it
-          : "Website deployed successfully!"; // Default base message
+          ? result.message.split("URL")[0].trim()
+          : "Website deployed successfully!";
 
         toast.success(
           <DeploySuccessToast message={baseMessage} url={result.url} />
@@ -198,56 +165,43 @@ export default function Home() {
       console.error("Deployment error:", error);
       const message =
         error instanceof Error ? error.message : "Error deploying website";
-      setUploadResult({ success: false, message }); // Set error result
+      setUploadResult({ success: false, message });
       toast.error(message);
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Function to delete the website
   const deleteWebsite = async (idToDelete: string) => {
-    // Basic check
     if (!idToDelete) {
       console.error("deleteWebsite called without a projectId");
       return { success: false, message: "Project ID is missing" };
     }
 
-    // We don't need a separate 'isDeleting' state here as HtmlViewer handles it
-    // We just perform the API call and return the result.
-    console.log(`Attempting to delete project ID from frontend: ${idToDelete}`);
     try {
-      // Use the new /api/deploy endpoint with DELETE method
       const response = await fetch("/api/deploy", {
-        // Updated endpoint
-        method: "DELETE", // Explicitly DELETE
+        method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ projectId: idToDelete }), // Send projectId in the body
+        body: JSON.stringify({ projectId: idToDelete }),
       });
 
       const result = await response.json();
-      console.log("Delete API response:", result);
 
       if (result.success) {
-        // Let the caller handle UI updates (like calling handleDeleteSuccess)
-        console.log("Deletion successful according to API");
-        // Optionally, clear local state related to the deleted project immediately
-        // setProjectId(null);
-        // setUploadResult(null);
-        // toast.success(result.message || "Website deleted."); // Toast handled by caller
+        // Success handled by caller
       } else {
         console.error("Deletion failed according to API:", result.message);
         toast.error(result.message || "Failed to delete website");
       }
-      return result; // Return the full result object
+      return result;
     } catch (error) {
       console.error("Deletion fetch error:", error);
       const message =
         error instanceof Error ? error.message : "Error deleting website";
       toast.error(message);
-      return { success: false, message }; // Return error result
+      return { success: false, message };
     }
   };
 
@@ -269,10 +223,9 @@ export default function Home() {
         "image/png",
         "image/gif",
         "image/webp",
-        "application/pdf", // Add PDF support
+        "application/pdf",
       ];
 
-      // Check if adding these files would exceed the maximum
       if (attachments.length + files.length > maxFiles) {
         toast.error(`You can only attach up to ${maxFiles} files at once.`);
         return;
@@ -305,7 +258,6 @@ export default function Home() {
         let loadedCount = 0;
         const totalFiles = validFiles.length;
 
-        // Generate previews for the valid files
         validFiles.forEach((file) => {
           const reader = new FileReader();
           reader.onload = (e) => {
@@ -436,75 +388,28 @@ export default function Home() {
             className="flex flex-col flex-grow items-center overflow-y-scroll px-4"
           >
             {messages.length === 0 && (
-              <motion.div className="h-[350px] w-full md:w-[600px] pt-20">
+              <motion.div className="h-[350px] w-full md:w-[500px] pt-20">
                 <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">
-                  <p className="flex flex-row justify-center gap-4 items-center text-zinc-900">
-                    <span>AI Website Generator</span>
-                  </p>
-                  <p>
-                    Start by describing the website you want to build, or try
-                    one of the suggestions below.
+                  <p className="flex flex-col justify-center gap-4 items-center text-zinc-900">
+                    <span className="text-lg font-bold">
+                      AI Website Generator
+                    </span>
+                    <p className="text-center">
+                      Start by describing the website you want to build, or try
+                      one of the suggestions below.
+                    </p>
                   </p>
                 </div>
               </motion.div>
             )}
-            {messages
-              .filter(
-                (m) =>
-                  m.role === "user" ||
-                  m.role === "assistant" ||
-                  m.role === "system"
-              )
-              .map((m: MessageType, idx, arr) => {
-                const isAssistant = m.role === "assistant";
-                const isLastAssistant = isAssistant && idx === arr.length - 1;
-                const isLoading =
-                  isLastAssistant &&
-                  (status === "streaming" || status === "submitted");
-                let userMessage = undefined;
-                if (isLastAssistant) {
-                  for (let i = idx - 1; i >= 0; i--) {
-                    if (arr[i].role === "user") {
-                      userMessage = arr[i].content;
-                      break;
-                    }
-                  }
-                }
-                // If this is a system error message, render as alert
-                if (
-                  m.role === "system" &&
-                  m.content?.includes("Something went wrong")
-                ) {
-                  return (
-                    <div
-                      key={m.id}
-                      className="w-full max-w-[500px] mx-auto my-2"
-                    >
-                      <div className="bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-xs flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4 text-red-500" />
-                          <span>{m.content}</span>
-                        </div>
-                        <button
-                          className="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-zinc-200 bg-white dark:bg-zinc-900"
-                          onClick={() => reload()}
-                          title="Retry"
-                        >
-                          <RotateCcw className="w-3 h-3" /> Retry
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <div
-                    key={m.id}
-                    className="flex flex-col items-center w-full max-w-[500px] mx-auto"
-                  >
-                    <Message message={m} isLoading={isLoading} />
-                  </div>
-                );
-              })}
+            {messages.map((m: MessageType) => (
+              <div
+                key={m.id}
+                className="flex flex-col items-center w-full max-w-[500px] mx-auto"
+              >
+                <Message message={m} />
+              </div>
+            ))}
             <div ref={messagesEndRef} />
           </div>
           {/* Suggestions and Form Container */}
@@ -521,7 +426,6 @@ export default function Home() {
                   >
                     <button
                       onClick={async () => {
-                        // Don't process if we're still loading attachments
                         if (isLoadingAttachments) {
                           toast.error(
                             "Please wait for attachments to finish loading"
@@ -633,7 +537,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Before the input form, show error alert and retry button if error is present */}
             {error && (
               <div className="w-full md:max-w-[500px] mx-auto mb-2 flex flex-col items-center">
                 <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-xs flex items-center justify-between gap-2">
@@ -664,13 +567,11 @@ export default function Home() {
                 }
 
                 if (currentHtml && currentHtml.trim().length > 0) {
-                  // If we have HTML context, add it to the input content
                   const contentWithContext =
                     input +
                     `\n\n<context>\n\u0060\u0060\u0060html\n${currentHtml}\n\u0060\u0060\u0060\n</context>`;
                   setInput(contentWithContext);
 
-                  // Use handleSubmit with the context and attachments
                   handleSubmit(e, {
                     experimental_attachments: attachmentPreviews
                       .map((preview, index) => {
@@ -689,7 +590,6 @@ export default function Home() {
                       ),
                   });
 
-                  // Reset the input to its original value without context
                   setInput("");
                 } else {
                   // Normal submission with just attachments
@@ -737,6 +637,20 @@ export default function Home() {
                   }
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
+                />
+                {/* Hidden file input for attachments */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                  accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      validateAndAddFiles(e.target.files);
+                      e.target.value = "";
+                    }
+                  }}
                 />
                 {/* Loading spinner in input when loading */}
                 {(status === "streaming" || status === "submitted") &&
@@ -787,7 +701,7 @@ export default function Home() {
             {/* Drop zone instructions - only visible when dragging */}
             <div className="text-center text-xs text-zinc-500 mt-1 md:max-w-[500px] mx-auto">
               Drag & drop images or PDFs, paste from clipboard, or click the
-              paperclip to attach
+              paperclip to attach to attach
             </div>
           </div>
         </div>
