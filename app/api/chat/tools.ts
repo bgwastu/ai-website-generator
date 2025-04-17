@@ -26,16 +26,7 @@ const htmlTemplate = `<!DOCTYPE html>
 </html>`;
 
 export const websiteGenerator = tool({
-  description: `Generates or updates the website HTML based on user input and conversation context. Use this tool for all website modifications.
-    
-Note:
-- ALWAYS ASK FOR THE USER DETAILS BEFORE USING THE 'websiteGenerator' tool.
-- You cannot create backend code, only one single page html file.
-- When asked to create or modify a website, first assess if the request is clear and detailed enough.
-- Share what you want to build with the user BEFORE using the 'websiteGenerator' tool.
-- When using the websiteGenerator tool, ALWAYS pass the most recent HTML state as the 'currentHtml' parameter. If no previous HTML exists, pass 'null'. The tool's execute function will handle finding the latest state.
-- When you use the websiteGenerator tool to update or generate website HTML, you must always explain and summarize the changes you made to the user, immediately after the HTML is generated. Your explanation should be clear, creative, and conversational, and should help the user understand exactly what was changed or added. Do not skip this step, even if the change seems minor. Do not include raw HTML in your summary.
-- This tool uses a multi-step reasoning process: it breaks down complex requests into logical steps, reasons through each, and only then generates the final HTML.`,
+  description: `Generates or updates the website HTML based on user input and conversation context. Use this tool for all website modifications.`,
   parameters: z.object({
     currentHtml: z
       .string()
