@@ -1,7 +1,7 @@
 import { openai } from "@ai-sdk/openai";
 import { Message as AIMessage } from "@ai-sdk/react";
 import { streamText } from "ai";
-import { websiteGenerator } from "./tools";
+import { websiteGenerator } from "./tools/website-generator";
 
 export async function POST(req: Request) {
   try {
