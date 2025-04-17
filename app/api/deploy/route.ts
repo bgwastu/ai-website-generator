@@ -37,12 +37,11 @@ const nouns = [
   'avenue', 'path', 'journey', 'quest', 'venture', 'mission', 'project'
 ];
 
-function generateProjectId(): string {
+function generateDomain(): string {
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomNumber = Math.floor(Math.random() * 9000) + 1000; // 1000-9999
-
-  return `test-${randomAdjective}-${randomNoun}-${randomNumber}`;
+  const randomNumber = Math.floor(Math.random() * 9000) + 1000;
+  return `test-${randomAdjective}-${randomNoun}-${randomNumber}.laman.ai`;
 }
 
 
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { htmlContent, projectId } = body;
+    const { htmlContent, domain } = body;
 
     if (!htmlContent) {
       return NextResponse.json(
@@ -67,10 +66,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalProjectId = projectId || generateProjectId();
-    const customDomain = `${finalProjectId}.laman.ai`;
-    const key = `website-generator/${customDomain}/index.html`; // R2 Key
-    const publicR2Url = `${publicUrlBase}/${key}`; // Public R2 URL (fallback)
+    const finalDomain = domain || generateDomain();
+    const key = `website-generator/${finalDomain}/index.html`;
+    const publicR2Url = `${publicUrlBase}/${key}`;
 
     // 1. Upload to R2
     console.log(`Uploading to R2 with key: ${key}`);
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
     console.log('Upload to R2 successful');
 
     // 2. Add Custom Domain via Laman.ai API
-    console.log(`Calling laman.ai API to add domain: ${customDomain}`);
+    console.log(`Calling laman.ai API to add domain: ${finalDomain}`);
     try {
       const response = await fetch('https://laman.ai/add-domain', {
         method: 'POST',
@@ -92,32 +90,29 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
           'X-API-Key': LAMAN_API_KEY
         },
-        body: JSON.stringify({ domain: customDomain })
+        body: JSON.stringify({ domain: finalDomain })
       });
       const data = await response.json();
       console.log('Laman.ai add-domain response:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         console.error('Failed to create custom domain via Laman.ai:', data);
-        // Proceeding, but will return the R2 URL as fallback
       }
 
-      // Return success with the custom domain URL as primary
-      const finalUrl = response.ok ? `https://${customDomain}` : publicR2Url;
-      console.log(`Deployment successful. URL: ${finalUrl}, Project ID: ${finalProjectId}`);
+      const finalUrl = response.ok ? `https://${finalDomain}` : publicR2Url;
+      console.log(`Deployment successful. URL: ${finalUrl}, Domain: ${finalDomain}`);
       return NextResponse.json({
         success: true,
-        url: finalUrl, // Use custom domain if successful, else fallback to R2 public URL
-        projectId: finalProjectId,
+        url: finalUrl,
+        domain: finalDomain,
       });
 
     } catch (lamanError) {
       console.error('Error calling Laman.ai add-domain API:', lamanError);
-      // Fallback to R2 URL if Laman.ai API call fails
       return NextResponse.json({
         success: true,
-        url: publicR2Url, // Return the R2 URL as fallback
-        projectId: finalProjectId,
+        url: publicR2Url,
+        domain: finalDomain,
         message: 'Deployment to storage successful, but custom domain setup failed.',
       });
     }
@@ -144,18 +139,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { projectId } = body;
+    const { domain } = body;
 
-    if (!projectId) {
+    if (!domain) {
       return NextResponse.json(
-        { success: false, message: 'Missing projectId' },
+        { success: false, message: 'Missing domain' },
         { status: 400 }
       );
     }
 
-    console.log(`Attempting to delete project ID: ${projectId}`);
-    const customDomain = `${projectId}.laman.ai`;
-    const key = `website-generator/${customDomain}/index.html`; // R2 Key
+    console.log(`Attempting to delete domain: ${domain}`);
+    const key = `website-generator/${domain}/index.html`;
 
     // 1. Delete from R2
     console.log(`Deleting from R2 with key: ${key}`);
@@ -168,13 +162,11 @@ export async function DELETE(request: NextRequest) {
       console.log('Delete from R2 successful');
     } catch (r2Error) {
       console.error(`Error deleting from R2 (Key: ${key}):`, r2Error);
-      // Decide if you want to stop or continue if R2 deletion fails
-      // For now, we log the error and continue to try removing the domain.
     }
 
 
     // 2. Remove Custom Domain via Laman.ai API
-    console.log(`Calling laman.ai API to remove domain: ${customDomain}`);
+    console.log(`Calling laman.ai API to remove domain: ${domain}`);
     let lamanMessage = 'Attempted to remove custom domain.';
     try {
       const response = await fetch('https://laman.ai/remove-domain', {
@@ -183,7 +175,7 @@ export async function DELETE(request: NextRequest) {
           'Content-Type': 'application/json',
           'X-API-Key': LAMAN_API_KEY
         },
-        body: JSON.stringify({ domain: customDomain })
+        body: JSON.stringify({ domain })
       });
       const data = await response.json();
       console.log('Laman.ai remove-domain response:', JSON.stringify(data, null, 2));

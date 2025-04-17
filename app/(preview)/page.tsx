@@ -35,9 +35,9 @@ export default function Home() {
     success: boolean;
     message: string;
     url?: string;
-    projectId?: string;
+    domain?: string;
   } | null>(null);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  const [domain, setDomain] = useState<string | null>(null);
 
   const {
     messages,
@@ -85,10 +85,8 @@ export default function Home() {
         // Set current HTML to the latest version
         setCurrentHtml(newHtmlContent);
 
-        if (projectId) {
-          deployWebsite(newHtmlContent);
-          toast.info("Website automatically updated with latest changes.");
-        }
+        deployWebsite(newHtmlContent);
+        toast.info("Website automatically updated with latest changes.");
       }
       inputRef.current?.focus();
     },
@@ -131,7 +129,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           htmlContent: content,
-          projectId: projectId,
+          domain: domain,
         }),
       });
 
@@ -139,8 +137,8 @@ export default function Home() {
       setUploadResult(result);
 
       if (result.success) {
-        if (result.projectId) {
-          setProjectId(result.projectId);
+        if (result.domain) {
+          setDomain(result.domain);
         }
         // Mark the currently viewed version as deployed
         setDeployedVersionIndex(currentVersionIndex);
@@ -189,10 +187,10 @@ export default function Home() {
     }
   };
 
-  const deleteWebsite = async (idToDelete: string) => {
-    if (!idToDelete) {
-      console.error("deleteWebsite called without a projectId");
-      return { success: false, message: "Project ID is missing" };
+  const deleteWebsite = async (domain: string) => {
+    if (!domain) {
+      console.error("deleteWebsite called without a domain");
+      return { success: false, message: "Domain is missing" };
     }
 
     try {
@@ -201,7 +199,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ projectId: idToDelete }),
+        body: JSON.stringify({ domain: domain }),
       });
 
       const result = await response.json();
@@ -224,7 +222,7 @@ export default function Home() {
 
   // Function to handle successful deletion
   const handleDeleteSuccess = () => {
-    setProjectId(null);
+    setDomain(null);
     setUploadResult(null);
     toast.success("Website deleted successfully");
   };
@@ -419,7 +417,7 @@ export default function Home() {
   return (
     <div className="h-screen" ref={dropZoneRef}>
       {/* Responsive layout: stack on mobile, side-by-side on desktop */}
-      <motion.div layout className="flex flex-col md:flex-row h-screen gap-4 pb-4">
+      <motion.div layout className="flex flex-col md:flex-row h-screen gap-2 pb-4">
         {/* Main chat area */}
         <div className="flex flex-col justify-between flex-1">
           <div
@@ -500,7 +498,7 @@ export default function Home() {
                 >
                   <HtmlViewer
                     htmlContent={currentHtml}
-                    projectId={projectId}
+                    domain={domain}
                     isUploading={isUploading}
                     onDeploy={deployWebsite}
                     uploadResult={uploadResult}
@@ -768,7 +766,7 @@ export default function Home() {
             >
               <HtmlViewer
                 htmlContent={currentHtml}
-                projectId={projectId}
+                domain={domain}
                 isUploading={isUploading}
                 onDeploy={deployWebsite}
                 uploadResult={uploadResult}
