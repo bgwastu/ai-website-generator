@@ -418,7 +418,7 @@ export default function Home() {
   return (
     <div className="h-screen" ref={dropZoneRef}>
       {/* Responsive layout: stack on mobile, side-by-side on desktop */}
-      <div className="flex flex-col md:flex-row h-screen gap-4 pb-4">
+      <motion.div layout className="flex flex-col md:flex-row h-screen gap-4 pb-4">
         {/* Main chat area */}
         <div className="flex flex-col justify-between flex-1">
           <div
@@ -490,24 +490,30 @@ export default function Home() {
                 ))}
             </div>
             {/* Responsive HTML preview: show above input on mobile, right on desktop */}
-            <div className="block md:hidden mb-4">
-              {currentHtml && (
-                <HtmlViewer
-                  htmlContent={currentHtml}
-                  projectId={projectId}
-                  isUploading={isUploading}
-                  onDeploy={deployWebsite}
-                  uploadResult={uploadResult}
-                  onDelete={deleteWebsite}
-                  onDeleteSuccess={handleDeleteSuccess}
-                  currentVersionIndex={currentVersionIndex}
-                  totalVersions={Math.max(htmlVersions.length, 1)}
-                  onPreviousVersion={goToPreviousVersion}
-                  onNextVersion={goToNextVersion}
-                  deployedVersionIndex={deployedVersionIndex}
-                />
-              )}
-            </div>
+            {currentHtml && currentHtml.trim() !== "" && (
+              <div className="block md:hidden mb-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                >
+                  <HtmlViewer
+                    htmlContent={currentHtml}
+                    projectId={projectId}
+                    isUploading={isUploading}
+                    onDeploy={deployWebsite}
+                    uploadResult={uploadResult}
+                    onDelete={deleteWebsite}
+                    onDeleteSuccess={handleDeleteSuccess}
+                    currentVersionIndex={currentVersionIndex}
+                    totalVersions={Math.max(htmlVersions.length, 1)}
+                    onPreviousVersion={goToPreviousVersion}
+                    onNextVersion={goToNextVersion}
+                    deployedVersionIndex={deployedVersionIndex}
+                  />
+                </motion.div>
+              </div>
+            )}
 
             {/* File attachments preview */}
             {(attachmentPreviews.length > 0 || isLoadingAttachments) && (
@@ -749,25 +755,34 @@ export default function Home() {
           </div>
         </div>
         {/* Desktop HTML preview area */}
-        <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full mt-4">
-          {currentHtml && (
-            <HtmlViewer
-              htmlContent={currentHtml}
-              projectId={projectId}
-              isUploading={isUploading}
-              onDeploy={deployWebsite}
-              uploadResult={uploadResult}
-              onDelete={deleteWebsite}
-              onDeleteSuccess={handleDeleteSuccess}
-              currentVersionIndex={currentVersionIndex}
-              totalVersions={Math.max(htmlVersions.length, 1)}
-              onPreviousVersion={goToPreviousVersion}
-              onNextVersion={goToNextVersion}
-              deployedVersionIndex={deployedVersionIndex}
-            />
-          )}
-        </div>
-      </div>
+        {currentHtml && currentHtml.trim() !== "" && (
+          <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full flex-1">
+            <motion.div
+              className="h-full flex-1 flex flex-col"
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            >
+              <HtmlViewer
+                htmlContent={currentHtml}
+                projectId={projectId}
+                isUploading={isUploading}
+                onDeploy={deployWebsite}
+                uploadResult={uploadResult}
+                onDelete={deleteWebsite}
+                onDeleteSuccess={handleDeleteSuccess}
+                currentVersionIndex={currentVersionIndex}
+                totalVersions={Math.max(htmlVersions.length, 1)}
+                onPreviousVersion={goToPreviousVersion}
+                onNextVersion={goToNextVersion}
+                deployedVersionIndex={deployedVersionIndex}
+              />
+            </motion.div>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }
