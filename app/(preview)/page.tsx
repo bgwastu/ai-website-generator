@@ -73,19 +73,15 @@ export default function Home() {
       }
 
       if (newHtmlContent !== null) {
-        // Add the new HTML to the versions array
         setHtmlVersions(prev => {
-          // If this is the first version, simply create a new array
           const newVersions = [...prev, newHtmlContent!];
-          // Set current version index to the latest
-          setCurrentVersionIndex(newVersions.length - 1);
+          const newIndex = newVersions.length - 1;
+          setCurrentVersionIndex(newIndex);
+          setCurrentHtml(newHtmlContent);
+          // Deploy and mark as deployed for this new version
+          deployWebsite(newHtmlContent, newIndex);
           return newVersions;
         });
-        
-        // Set current HTML to the latest version
-        setCurrentHtml(newHtmlContent);
-
-        deployWebsite(newHtmlContent);
         toast.info("Website automatically updated with latest changes.");
       }
       inputRef.current?.focus();
@@ -96,10 +92,8 @@ export default function Home() {
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
 
-  const deployWebsite = async (htmlToDeploy?: string) => {
-    // Deploy the currently viewed version
+  const deployWebsite = async (htmlToDeploy?: string, versionIndex?: number) => {
     const content = htmlToDeploy || htmlVersions[currentVersionIndex] || currentHtml;
-
     if (typeof content !== "string") {
       console.error(
         "Deployment error: Content is not a string. Value:",
@@ -108,40 +102,37 @@ export default function Home() {
       toast.error("Cannot deploy: Invalid website content.");
       return;
     }
-
     if (!content || content.trim() === "") {
       toast.error("No website content to deploy");
       return;
     }
-
     if (!htmlToDeploy) {
       toast.info("Deploying website...");
     }
-
     setIsUploading(true);
     setUploadResult(null);
-
     try {
+      const payload = {
+        htmlContent: content,
+        domain: domain,
+      };
       const response = await fetch("/api/deploy", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          htmlContent: content,
-          domain: domain,
-        }),
+        body: JSON.stringify(payload),
       });
-
       const result = await response.json();
       setUploadResult(result);
-
       if (result.success) {
         if (result.domain) {
           setDomain(result.domain);
         }
-        // Mark the currently viewed version as deployed
-        setDeployedVersionIndex(currentVersionIndex);
+        // Use the provided versionIndex if available, otherwise fallback
+        setDeployedVersionIndex(
+          typeof versionIndex === "number" ? versionIndex : currentVersionIndex
+        );
 
         const DeploySuccessToast = ({
           message,
