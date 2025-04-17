@@ -487,6 +487,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                     className="hidden"
                     onChange={handleUploadFile}
                     disabled={isUploadingFile}
+                    accept="image/*"
                   />
                   <span className={`px-4 py-2 rounded text-base bg-blue-500 text-white flex items-center gap-2 shadow-md ${isUploadingFile ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-600"}`}>
                     <UploadIcon size={20} /> {isUploadingFile ? "Uploading..." : "Upload file"}
@@ -504,6 +505,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                       className="hidden"
                       onChange={handleUploadFile}
                       disabled={isUploadingFile}
+                      accept="image/*"
                     />
                     <span className={`px-2 py-1 rounded text-xs bg-blue-500 text-white flex items-center gap-1 ${isUploadingFile ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-600"}`}>
                       <UploadIcon size={14} /> {isUploadingFile ? "Uploading..." : "Upload file"}
