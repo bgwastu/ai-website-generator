@@ -18,6 +18,8 @@ type Attachment = {
 
 export default function Home() {
   const [currentHtml, setCurrentHtml] = useState<string>("");
+  const [htmlVersions, setHtmlVersions] = useState<string[]>([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState<number>(0);
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<
@@ -70,6 +72,16 @@ export default function Home() {
       }
 
       if (newHtmlContent !== null) {
+        // Add the new HTML to the versions array
+        setHtmlVersions(prev => {
+          // If this is the first version, simply create a new array
+          const newVersions = [...prev, newHtmlContent!];
+          // Set current version index to the latest
+          setCurrentVersionIndex(newVersions.length - 1);
+          return newVersions;
+        });
+        
+        // Set current HTML to the latest version
         setCurrentHtml(newHtmlContent);
 
         if (projectId) {
@@ -377,6 +389,28 @@ export default function Home() {
     },
   ];
 
+  // Function to navigate to a specific version
+  const navigateToVersion = (index: number) => {
+    if (index >= 0 && index < htmlVersions.length) {
+      setCurrentVersionIndex(index);
+      setCurrentHtml(htmlVersions[index]);
+    }
+  };
+
+  // Function to navigate to previous version
+  const goToPreviousVersion = () => {
+    if (currentVersionIndex > 0) {
+      navigateToVersion(currentVersionIndex - 1);
+    }
+  };
+
+  // Function to navigate to next version
+  const goToNextVersion = () => {
+    if (currentVersionIndex < htmlVersions.length - 1) {
+      navigateToVersion(currentVersionIndex + 1);
+    }
+  };
+
   return (
     <div className="h-screen" ref={dropZoneRef}>
       {/* Responsive layout: stack on mobile, side-by-side on desktop */}
@@ -462,6 +496,10 @@ export default function Home() {
                   uploadResult={uploadResult}
                   onDelete={deleteWebsite}
                   onDeleteSuccess={handleDeleteSuccess}
+                  currentVersionIndex={currentVersionIndex}
+                  totalVersions={Math.max(htmlVersions.length, 1)}
+                  onPreviousVersion={goToPreviousVersion}
+                  onNextVersion={goToNextVersion}
                 />
               )}
             </div>
@@ -716,6 +754,10 @@ export default function Home() {
               uploadResult={uploadResult}
               onDelete={deleteWebsite}
               onDeleteSuccess={handleDeleteSuccess}
+              currentVersionIndex={currentVersionIndex}
+              totalVersions={Math.max(htmlVersions.length, 1)}
+              onPreviousVersion={goToPreviousVersion}
+              onNextVersion={goToNextVersion}
             />
           )}
         </div>

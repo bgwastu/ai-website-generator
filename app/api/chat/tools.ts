@@ -30,6 +30,7 @@ export const websiteGenerator = tool({
     
 Note:
 - ALWAYS ASK FOR THE USER DETAILS BEFORE USING THE 'websiteGenerator' tool.
+- You cannot create backend code, only one single page html file.
 - When asked to create or modify a website, first assess if the request is clear and detailed enough.
 - Share what you want to build with the user BEFORE using the 'websiteGenerator' tool.
 - When using the websiteGenerator tool, ALWAYS pass the most recent HTML state as the 'currentHtml' parameter. If no previous HTML exists, pass 'null'. The tool's execute function will handle finding the latest state.
@@ -96,18 +97,12 @@ ${context}`,
 
       if (status === "update") {
         result = await generateText({
-          model: openai("gpt-4.1-mini"),
+          model: openai("gpt-4.1-neno"),
           system: `IMPORTANT: You are an expert website patching tool. You must follow these requirements EXACTLY:
 
 - You are given the current HTML of a single-page website and a user request to update or modify it.
 - Your job is to update ONLY the relevant parts of the HTML as requested, preserving all other content, structure, and code from previous HTML
 - DO NOT remove or alter unrelated sections.
-- Use Tailwind CSS, Alpine.js, and FontAwesome as needed, but do not add unnecessary code.
-- For any diagrams, ALWAYS use Mermaid.js via CDN (https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js). DO NOT use any other diagram libraries.
-- When adding Mermaid diagrams, ALWAYS use <pre class="mermaid">...</pre> blocks. DO NOT use <script type="module"> or ESM imports for Mermaid. Mermaid is already included and initialized via CDN; you only need to output the correct <pre class="mermaid">...</pre> blocks.
-- All Mermaid diagrams MUST be strictly compatible with Mermaid.js version 11.6.0. Double-check for syntax errors and do not use any features not supported in this version.
-- DO NOT use SVG for any purpose. SVG is completely banned and must not appear in the HTML, for diagrams, icons, or any other use.
-- DO NOT invent or make up content. Only use what is provided in the context and instructions.
 - Make sure to not remove any existing code, only update the relevant parts based on the instructions.
 - The output MUST be FULL HTML code in HTML format without any \`\`\`html or \`\`\` tags.`,
           prompt: `Current HTML:\n${currentHtml}\n\nUpdated HTML:\n${updateInstructions}\n\nUser Instructions:\n${updateInstructions}`,
