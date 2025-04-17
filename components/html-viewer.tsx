@@ -12,6 +12,7 @@ import {
   FileIcon,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { useQuery } from '@tanstack/react-query';
 
 interface HtmlViewerProps {
   htmlContent: string;
@@ -57,6 +58,22 @@ function injectLinkHandler(html: string): string {
   return html + handlerScript;
 }
 
+const useFiles = (domain: string | null, enabled: boolean) => {
+  return useQuery({
+    queryKey: ['files', domain],
+    queryFn: async () => {
+      if (!domain) return [];
+      const res = await fetch(`/api/deploy/${domain}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.files)) {
+        return data.files;
+      }
+      return [];
+    },
+    enabled: !!domain && enabled,
+  });
+};
+
 const HtmlViewer: React.FC<HtmlViewerProps> = ({
   htmlContent,
   domain,
@@ -77,36 +94,13 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"version" | "files">("version");
-  const [files, setFiles] = useState<string[]>([]);
-  const [isFetchingFiles, setIsFetchingFiles] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
+  // Use React Query for file fetching
+  const { data: files = [], isLoading: isFetchingFiles, refetch } = useFiles(domain, activeTab === "files");
+
   const safeHtmlContent = injectLinkHandler(htmlContent);
-
-  const fetchFiles = async () => {
-    if (!domain) return;
-    setIsFetchingFiles(true);
-    try {
-      const res = await fetch(`/api/deploy/${domain}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.files)) {
-        setFiles(data.files);
-      } else {
-        setFiles([]);
-      }
-    } catch {
-      setFiles([]);
-    } finally {
-      setIsFetchingFiles(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "files" && domain) {
-      fetchFiles();
-    }
-  }, [activeTab, domain]);
 
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !domain) return;
@@ -119,7 +113,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
         method: "POST",
         body: formData,
       });
-      await fetchFiles();
+      await refetch();
     } finally {
       setIsUploadingFile(false);
     }
@@ -135,7 +129,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename }),
       });
-      await fetchFiles();
+      await refetch();
     } finally {
       setDeletingFile(null);
     }
@@ -515,7 +509,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '100%' }}>
                   <ul className="divide-y divide-zinc-200">
-                    {files.map((file) => {
+                    {files.map((file: string) => {
                       const fileUrl = domain ? `https://${domain}/${file}` : undefined;
                       const isDeleting = deletingFile === file;
                       return (
