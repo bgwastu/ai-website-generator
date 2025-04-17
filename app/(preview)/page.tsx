@@ -90,6 +90,7 @@ export default function Home() {
           toast.info("Website automatically updated with latest changes.");
         }
       }
+      inputRef.current?.focus();
     },
   });
 
