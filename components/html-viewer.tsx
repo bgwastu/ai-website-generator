@@ -80,6 +80,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   const [files, setFiles] = useState<string[]>([]);
   const [isFetchingFiles, setIsFetchingFiles] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [deletingFile, setDeletingFile] = useState<string | null>(null);
 
   const safeHtmlContent = injectLinkHandler(htmlContent);
 
@@ -127,7 +128,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   const handleDeleteFile = async (filename: string) => {
     if (!domain) return;
     if (!confirm(`Delete file ${filename}?`)) return;
-    setIsUploadingFile(true);
+    setDeletingFile(filename);
     try {
       await fetch(`/api/deploy/${domain}`, {
         method: "DELETE",
@@ -136,7 +137,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
       });
       await fetchFiles();
     } finally {
-      setIsUploadingFile(false);
+      setDeletingFile(null);
     }
   };
 
@@ -516,8 +517,9 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                   <ul className="divide-y divide-zinc-200">
                     {files.map((file) => {
                       const fileUrl = domain ? `https://${domain}/${file}` : undefined;
+                      const isDeleting = deletingFile === file;
                       return (
-                        <li key={file} className="flex items-center justify-between py-2">
+                        <li key={file} className={`flex items-center justify-between py-2 transition-opacity ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
                           <div className="flex items-center gap-2">
                             <FileIcon size={14} className="text-zinc-400" />
                             {fileUrl ? (
@@ -540,9 +542,9 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                               e.stopPropagation();
                               handleDeleteFile(file);
                             }}
-                            disabled={isUploadingFile}
+                            disabled={isDeleting}
                           >
-                            <Trash2Icon size={12} /> Delete
+                            {isDeleting ? (<><Trash2Icon size={12} /> Deleting...</>) : (<><Trash2Icon size={12} /> Delete</>)}
                           </button>
                         </li>
                       );
