@@ -122,7 +122,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
       >
         <div className="bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 flex-shrink-0 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="text-sm">Generated Website Preview</span>
+            <span className="text-sm">Generated Website</span>
             {totalVersions > 0 && (
               <div className="flex items-center border-l border-zinc-300 pl-2 ml-2">
                 <button

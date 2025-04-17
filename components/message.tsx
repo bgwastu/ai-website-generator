@@ -2,8 +2,8 @@
 
 import { Message as MessageType } from "@ai-sdk/react";
 import { motion } from "framer-motion";
+import { Bot, User } from "lucide-react";
 import Image from "next/image";
-import { BotIcon, UserIcon } from "./icons";
 import { Markdown } from "./markdown"; // Import the Markdown component
 import { TextShimmer } from "./motion-primitives/text-shimmer";
 
@@ -62,9 +62,9 @@ export const Message = ({
     >
       <div className="size-[28px] flex flex-col justify-center items-center flex-shrink-0 text-zinc-400">
         {role === "assistant" ? (
-          <BotIcon />
+          <Bot />
         ) : (
-          <UserIcon />
+          <User />
         )}
       </div>
       <div className="flex flex-col gap-2 w-full">
