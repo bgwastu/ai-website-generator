@@ -20,6 +20,7 @@ export default function Home() {
   const [currentHtml, setCurrentHtml] = useState<string>("");
   const [htmlVersions, setHtmlVersions] = useState<string[]>([]);
   const [currentVersionIndex, setCurrentVersionIndex] = useState<number>(0);
+  const [deployedVersionIndex, setDeployedVersionIndex] = useState<number | null>(null);
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<
@@ -97,7 +98,8 @@ export default function Home() {
     useScrollToBottom<HTMLDivElement>();
 
   const deployWebsite = async (htmlToDeploy?: string) => {
-    const content = htmlToDeploy || currentHtml;
+    // Deploy the currently viewed version
+    const content = htmlToDeploy || htmlVersions[currentVersionIndex] || currentHtml;
 
     if (typeof content !== "string") {
       console.error(
@@ -139,6 +141,8 @@ export default function Home() {
         if (result.projectId) {
           setProjectId(result.projectId);
         }
+        // Mark the currently viewed version as deployed
+        setDeployedVersionIndex(currentVersionIndex);
 
         const DeploySuccessToast = ({
           message,
@@ -500,6 +504,7 @@ export default function Home() {
                   totalVersions={Math.max(htmlVersions.length, 1)}
                   onPreviousVersion={goToPreviousVersion}
                   onNextVersion={goToNextVersion}
+                  deployedVersionIndex={deployedVersionIndex}
                 />
               )}
             </div>
@@ -758,6 +763,7 @@ export default function Home() {
               totalVersions={Math.max(htmlVersions.length, 1)}
               onPreviousVersion={goToPreviousVersion}
               onNextVersion={goToNextVersion}
+              deployedVersionIndex={deployedVersionIndex}
             />
           )}
         </div>

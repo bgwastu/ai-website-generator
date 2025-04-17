@@ -25,6 +25,7 @@ interface HtmlViewerProps {
   totalVersions: number;
   onPreviousVersion: () => void;
   onNextVersion: () => void;
+  deployedVersionIndex: number | null;
 }
 
 function injectLinkHandler(html: string): string {
@@ -66,6 +67,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   totalVersions,
   onPreviousVersion,
   onNextVersion,
+  deployedVersionIndex,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
@@ -113,6 +115,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   const hasPreviousVersion = currentVersionIndex > 0;
   const hasNextVersion = currentVersionIndex < totalVersions - 1;
   const hasMultipleVersions = totalVersions > 1;
+  const isDeployed = deployedVersionIndex === currentVersionIndex;
 
   return (
     <>
@@ -124,7 +127,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-sm">Generated Website</span>
             {totalVersions > 0 && (
-              <div className="flex items-center border-l border-zinc-300 pl-2 ml-2">
+              <div className="flex items-center border-l border-zinc-300 pl-2 ml-2 gap-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -140,8 +143,11 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                 >
                   <ChevronLeftIcon size={14} />
                 </button>
-                <span className="mx-1 text-zinc-600">
+                <span className="mx-1 text-zinc-600 flex items-center gap-1">
                   {`Version ${versionNumber}`}
+                  {isDeployed && (
+                    <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">Deployed</span>
+                  )}
                 </span>
                 <button
                   onClick={(e) => {
@@ -189,17 +195,17 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
               </button>
             )}
 
-            {!(uploadResult?.success && uploadResult?.url) ? (
+            {!(uploadResult?.success && uploadResult?.url) || !isDeployed ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeploy();
                 }}
                 className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUploading || isDeleting}
-                title="Deploy website"
+                disabled={isUploading || isDeployed || isDeleting}
+                title={isDeployed ? "This version is already deployed" : "Deploy this version"}
               >
-                {isUploading ? "Uploading..." : "Deploy"}
+                {isUploading ? "Uploading..." : isDeployed ? "Deployed" : "Deploy this version"}
               </button>
             ) : (
               <a
@@ -260,7 +266,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                   Website Preview
                 </span>
                 {totalVersions > 0 && (
-                  <div className="flex items-center border-l border-zinc-300 pl-2 ml-2">
+                  <div className="flex items-center border-l border-zinc-300 pl-2 ml-2 gap-1">
                     <button
                       onClick={onPreviousVersion}
                       disabled={!hasPreviousVersion}
@@ -273,8 +279,11 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                     >
                       <ChevronLeftIcon size={16} />
                     </button>
-                    <span className="mx-1 text-sm text-zinc-600">
+                    <span className="mx-1 text-sm text-zinc-600 flex items-center gap-1">
                       {`Version ${versionNumber}`}
+                      {isDeployed && (
+                        <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">Deployed</span>
+                      )}
                     </span>
                     <button
                       onClick={onNextVersion}
@@ -319,14 +328,14 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                   </button>
                 )}
 
-                {!(uploadResult?.success && uploadResult?.url) ? (
+                {!(uploadResult?.success && uploadResult?.url) || !isDeployed ? (
                   <button
                     onClick={() => onDeploy()}
                     className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isUploading || isDeleting}
-                    title="Deploy website"
+                    disabled={isUploading || isDeployed || isDeleting}
+                    title={isDeployed ? "This version is already deployed" : "Deploy this version"}
                   >
-                    {isUploading ? "Uploading..." : "Deploy"}
+                    {isUploading ? "Uploading..." : isDeployed ? "Deployed" : "Deploy this version"}
                   </button>
                 ) : (
                   <a
