@@ -1,6 +1,6 @@
 "use client";
 
-import HtmlViewer from "@/components/html-viewer";
+// import HtmlViewer from "@/components/html-viewer";
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
@@ -9,12 +9,24 @@ import { AlertTriangle, PaperclipIcon, RotateCcw, XCircle } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import PreviewPane from "@/components/preview-pane";
 
 type Attachment = {
   name: string;
   url: string;
   contentType: string;
 };
+
+// Helper to check if a tool invocation is in progress (copied from message.tsx)
+function isWebsiteToolLoading(message: MessageType) {
+  if (!message?.parts) return false;
+  return message.parts.some(
+    (part: any) =>
+      part.type === "tool-invocation" &&
+      part.toolInvocation.toolName === "websiteGenerator" &&
+      part.toolInvocation.state !== "result"
+  );
+}
 
 export default function Home() {
   const [currentHtml, setCurrentHtml] = useState<string>("");
@@ -405,6 +417,16 @@ export default function Home() {
     }
   };
 
+  // Determine if website is loading
+  let isPreviewLoading = false;
+  if (messages.length > 0) {
+    // Find the latest assistant message
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (lastAssistant && isWebsiteToolLoading(lastAssistant)) {
+      isPreviewLoading = true;
+    }
+  }
+
   return (
     <div className="h-screen" ref={dropZoneRef}>
       {/* Responsive layout: stack on mobile, side-by-side on desktop */}
@@ -480,28 +502,27 @@ export default function Home() {
                 ))}
             </div>
             {/* Responsive HTML preview: show above input on mobile, right on desktop */}
-            {currentHtml && currentHtml.trim() !== "" && (
-              <div className="block md:hidden mb-4">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                >
-                  <HtmlViewer
-                    htmlContent={currentHtml}
-                    domain={domain}
-                    isUploading={isUploading}
-                    onDeploy={deployWebsite}
-                    uploadResult={uploadResult}
-                    currentVersionIndex={currentVersionIndex}
-                    totalVersions={Math.max(htmlVersions.length, 1)}
-                    onPreviousVersion={goToPreviousVersion}
-                    onNextVersion={goToNextVersion}
-                    deployedVersionIndex={deployedVersionIndex}
-                  />
-                </motion.div>
-              </div>
-            )}
+            <div className="block md:hidden mb-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              >
+                <PreviewPane
+                  htmlContent={currentHtml}
+                  domain={domain}
+                  isUploading={isUploading}
+                  onDeploy={deployWebsite}
+                  uploadResult={uploadResult}
+                  currentVersionIndex={currentVersionIndex}
+                  totalVersions={Math.max(htmlVersions.length, 1)}
+                  onPreviousVersion={goToPreviousVersion}
+                  onNextVersion={goToNextVersion}
+                  deployedVersionIndex={deployedVersionIndex}
+                  isPreviewLoading={isPreviewLoading}
+                />
+              </motion.div>
+            </div>
 
             {/* File attachments preview */}
             {(attachmentPreviews.length > 0 || isLoadingAttachments) && (
@@ -743,31 +764,30 @@ export default function Home() {
           </div>
         </div>
         {/* Desktop HTML preview area */}
-        {currentHtml && currentHtml.trim() !== "" && (
-          <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full flex-1">
-            <motion.div
-              className="h-full flex-1 flex flex-col"
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-            >
-              <HtmlViewer
-                htmlContent={currentHtml}
-                domain={domain}
-                isUploading={isUploading}
-                onDeploy={deployWebsite}
-                uploadResult={uploadResult}
-                currentVersionIndex={currentVersionIndex}
-                totalVersions={Math.max(htmlVersions.length, 1)}
-                onPreviousVersion={goToPreviousVersion}
-                onNextVersion={goToNextVersion}
-                deployedVersionIndex={deployedVersionIndex}
-              />
-            </motion.div>
-          </div>
-        )}
+        <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full flex-1">
+          <motion.div
+            className="h-full flex-1 flex flex-col"
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <PreviewPane
+              htmlContent={currentHtml}
+              domain={domain}
+              isUploading={isUploading}
+              onDeploy={deployWebsite}
+              uploadResult={uploadResult}
+              currentVersionIndex={currentVersionIndex}
+              totalVersions={Math.max(htmlVersions.length, 1)}
+              onPreviousVersion={goToPreviousVersion}
+              onNextVersion={goToNextVersion}
+              deployedVersionIndex={deployedVersionIndex}
+              isPreviewLoading={isPreviewLoading}
+            />
+          </motion.div>
+        </div>
       </motion.div>
     </div>
   );
