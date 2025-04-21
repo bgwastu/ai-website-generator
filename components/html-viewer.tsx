@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useQuery } from '@tanstack/react-query';
+import { toast } from "sonner";
 
 interface HtmlViewerProps {
   htmlContent: string;
@@ -102,11 +103,18 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
     const formData = new FormData();
     formData.append("file", file);
     try {
-      await fetch(`/api/deploy/${domain}`, {
+      const res = await fetch(`/api/deploy/${domain}`, {
         method: "POST",
         body: formData,
       });
-      await refetch();
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.message);
+      } else {
+        await refetch();
+      }
+    } catch (error) {
+      toast.error("Failed to upload file. Please try again.");
     } finally {
       setIsUploadingFile(false);
     }
@@ -182,7 +190,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
           className={`px-3 py-1 rounded-t text-sm font-medium focus:outline-none ${activeTab === "files" ? "bg-zinc-50 border-x border-t border-zinc-200 text-blue-700" : "text-zinc-500 hover:text-blue-700"}`}
           onClick={() => setActiveTab("files")}
         >
-          Images
+          Your Images
         </button>
       </div>
 
