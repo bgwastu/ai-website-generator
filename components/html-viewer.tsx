@@ -21,10 +21,6 @@ interface HtmlViewerProps {
   onDeploy: () => void;
   uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
   isPreviewLoading?: boolean;
-  onDelete: (
-    domain: string
-  ) => Promise<{ success: boolean; message: string }>;
-  onDeleteSuccess: () => void;
   currentVersionIndex: number;
   totalVersions: number;
   onPreviousVersion: () => void;
@@ -81,8 +77,6 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   onDeploy,
   uploadResult,
   isPreviewLoading = false,
-  onDelete,
-  onDeleteSuccess,
   currentVersionIndex,
   totalVersions,
   onPreviousVersion,
@@ -92,7 +86,6 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<"version" | "files">("version");
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
@@ -241,30 +234,6 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                 </div>
               )}
               <div className="flex items-center gap-2 ml-auto">
-                {domain && uploadResult?.success && uploadResult?.url && (
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (
-                        confirm("Are you sure you want to delete this project?")
-                      ) {
-                        setIsDeleting(true);
-                        const result = await onDelete(domain!);
-                        setIsDeleting(false);
-
-                        if (result.success) {
-                          onDeleteSuccess();
-                        }
-                      }
-                    }}
-                    className="px-2 py-0.5 rounded text-xs bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                    disabled={isDeleting || isUploading}
-                    title="Delete website"
-                  >
-                    <Trash2Icon size={12} />
-                    {isDeleting ? "Deleting..." : "Delete"}
-                  </button>
-                )}
                 {!(uploadResult?.success && uploadResult?.url) || !isDeployed ? (
                   <button
                     onClick={(e) => {
@@ -272,7 +241,7 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                       onDeploy();
                     }}
                     className="px-2 py-0.5 rounded text-xs bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isUploading || isDeployed || isDeleting}
+                    disabled={isUploading || isDeployed}
                     title={
                       isDeployed
                         ? "This version is already deployed"
@@ -381,60 +350,6 @@ const HtmlViewer: React.FC<HtmlViewerProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {domain && uploadResult?.success && uploadResult?.url && (
-                        <button
-                          onClick={async () => {
-                            if (
-                              confirm("Are you sure you want to delete this project?")
-                            ) {
-                              setIsDeleting(true);
-                              const result = await onDelete(domain!);
-                              setIsDeleting(false);
-
-                              if (result.success) {
-                                onDeleteSuccess();
-                                closeModal();
-                              }
-                            }
-                          }}
-                          className="px-3 py-1 rounded text-sm bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          disabled={isDeleting || isUploading}
-                          title="Delete website"
-                        >
-                          <Trash2Icon size={14} />
-                          {isDeleting ? "Deleting..." : "Delete"}
-                        </button>
-                      )}
-
-                      {!(uploadResult?.success && uploadResult?.url) ||
-                      !isDeployed ? (
-                        <button
-                          onClick={() => onDeploy()}
-                          className="px-3 py-1 rounded text-sm bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isUploading || isDeployed || isDeleting}
-                          title={
-                            isDeployed
-                              ? "This version is already deployed"
-                              : "Deploy this version"
-                          }
-                        >
-                          {isUploading
-                            ? "Uploading..."
-                            : isDeployed
-                            ? "Deployed"
-                            : "Deploy this version"}
-                        </button>
-                      ) : (
-                        <a
-                          href={uploadResult.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1 rounded text-sm bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
-                          title={`View deployed site: ${uploadResult.url}`}
-                        >
-                          <ExternalLinkIcon size={14} /> Deployed
-                        </a>
-                      )}
                       <button
                         onClick={closeModal}
                         className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200"

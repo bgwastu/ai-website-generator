@@ -493,8 +493,6 @@ export default function Home() {
                     isUploading={isUploading}
                     onDeploy={deployWebsite}
                     uploadResult={uploadResult}
-                    onDelete={deleteWebsite}
-                    onDeleteSuccess={handleDeleteSuccess}
                     currentVersionIndex={currentVersionIndex}
                     totalVersions={Math.max(htmlVersions.length, 1)}
                     onPreviousVersion={goToPreviousVersion}
@@ -761,8 +759,6 @@ export default function Home() {
                 isUploading={isUploading}
                 onDeploy={deployWebsite}
                 uploadResult={uploadResult}
-                onDelete={deleteWebsite}
-                onDeleteSuccess={handleDeleteSuccess}
                 currentVersionIndex={currentVersionIndex}
                 totalVersions={Math.max(htmlVersions.length, 1)}
                 onPreviousVersion={goToPreviousVersion}
