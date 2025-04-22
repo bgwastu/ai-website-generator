@@ -129,6 +129,7 @@ Format your response as follows:
 Caption: [your caption]
 Quality: [your quality assessment]
 Color Palette: [your detailed color palette description]
+Color Palette in hex: [your detailed color palette description in hex]
 
 Respond in English only. Do not include any other information or commentary.`,
             },
@@ -140,6 +141,8 @@ Respond in English only. Do not include any other information or commentary.`,
 
     // Combine AI caption with aspect ratio and orientation
     const combinedCaption = `${aiCaption}\nAspect Ratio: ${aspectRatioStr} (${orientation})`;
+
+    console.log(combinedCaption);
 
     // For all images, embed the caption in EXIF and convert to WebP if needed
     const needsWebp = contentType !== "image/webp";
