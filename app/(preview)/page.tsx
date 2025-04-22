@@ -1,24 +1,25 @@
 "use client";
 
 import { Chat } from "@/components/chat";
+import Input from "@/components/input";
 import PreviewPane from "@/components/preview-pane";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ChevronLeft, GlobeIcon, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-
 export default function Home() {
-  const [projectId, setProjectId] = useQueryState("id");
+  const [projectId, setProjectId] = useQueryState("id", {
+    history: "push",
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -57,21 +58,21 @@ export default function Home() {
     },
     onSuccess: (data) => {
       toast.success(
-          <div className="flex flex-col gap-1 items-start">
+        <div className="flex flex-col gap-1 items-start">
           <span>Website deployed successfully!</span>
           {data.url && (
-              <a
+            <a
               href={data.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-                onClick={(e) => e.stopPropagation()}
-              >
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
               {data.url}
-              </a>
-            )}
-          </div>
-        );
+            </a>
+          )}
+        </div>
+      );
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
     onError: (error: any) => {
@@ -85,9 +86,8 @@ export default function Home() {
   };
 
   // Handle landing page submit
-  const handleLandingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleLandingSend = async (value: string) => {
+    if (!value.trim()) return;
     setLoading(true);
     setError(null);
     try {
@@ -95,7 +95,7 @@ export default function Home() {
       const projectRes = await fetch("/api/project", { method: "POST" });
       const { id } = await projectRes.json();
       setProjectId(id);
-      setInitialMessage(input);
+      setInitialMessage(value);
       setInput("");
     } catch (err: any) {
       setError(err.message);
@@ -109,29 +109,72 @@ export default function Home() {
   // Landing page if no projectId
   if (!projectId) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <form
-          onSubmit={handleLandingSubmit}
-          className="flex flex-col gap-4 w-full max-w-md"
-        >
-          <input
-            type="text"
-            className="border rounded px-4 py-2"
-            placeholder="Describe your website idea..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={loading}
-            ref={inputRef}
-          />
-          <button
-            type="submit"
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
-            disabled={loading || !input.trim()}
-          >
-            {loading ? "Creating..." : "Create Website Project"}
-          </button>
-          {error && <div className="text-red-600">{error}</div>}
-        </form>
+      <div className="flex flex-col items-center justify-center h-screen container mx-auto max-w-screen-xl px-4">
+        {/* AI Website Generator card at the top */}
+        <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200 w-full max-w-xl bg-white shadow-sm mb-4">
+          <div className="flex flex-col justify-center gap-4 items-center text-zinc-900">
+            <p className="text-lg font-bold">AI Website Generator</p>
+            <p className="text-center">
+              Start by describing the website you want to build, or try one of
+              the suggestions below.
+            </p>
+          </div>
+        </div>
+        <div className="w-full flex flex-col items-center">
+          <div className="w-full max-w-xl">
+            <Input
+              value={input}
+              onChange={setInput}
+              onSend={handleLandingSend}
+              loading={loading}
+              disabled={loading}
+              className="mb-4"
+              disableAttachments
+            />
+          </div>
+          {/* Predefined template suggestion buttons */}
+          <div className="grid sm:grid-cols-2 gap-2 w-full max-w-xl">
+            {[
+              {
+                title: "Create a",
+                label: "portfolio website",
+                action: "Create a portfolio website for a photographer",
+              },
+              {
+                title: "Build a",
+                label: "landing page for my app",
+                action:
+                  "Build a landing page for a new mobile app called 'TaskMaster'",
+              },
+              {
+                title: "Generate a",
+                label: "simple blog layout",
+                action:
+                  "Generate a simple blog layout with a header, main content area, and sidebar",
+              },
+              {
+                title: "Design a",
+                label: "contact page",
+                action:
+                  "Design a contact page with a form (name, email, message)",
+              },
+            ].map((action, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => {
+                  handleLandingSend(action.action);
+                }}
+                className="w-full text-left border border-zinc-200 text-zinc-800 rounded-lg p-2 text-sm hover:bg-zinc-100 transition-colors flex flex-col"
+                disabled={loading}
+              >
+                <span className="font-medium">{action.title}</span>
+                <span className="text-zinc-500">{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {error && <div className="text-red-600">{error}</div>}
       </div>
     );
   }
@@ -152,11 +195,11 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen">
+    <div className="h-screen container mx-auto max-w-screen-xl">
       {/* Floating toggle button for mobile */}
       {!showPreviewPane && (
         <button
-          className="fixed z-40 top-4 right-4 md:hidden bg-white text-blue-700 border border-blue-200 rounded-full px-3 py-1 flex items-center gap-1 shadow focus:outline-none text-sm"
+          className="fixed z-40 top-4 right-6 md:hidden bg-white text-blue-700 border border-blue-200 rounded-full px-3 py-1 flex items-center gap-1 shadow focus:outline-none text-sm"
           onClick={() => setShowPreviewPane(true)}
           aria-label="Show Preview Pane"
         >
@@ -167,28 +210,35 @@ export default function Home() {
       {/* Mobile Preview Pane Drawer */}
       {showPreviewPane && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowPreviewPane(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowPreviewPane(false)}
+          />
           <div className="relative ml-auto w-full max-w-md h-full bg-white shadow-xl flex flex-col">
             {/* Header moved here */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
               <GlobeIcon size={18} className="text-blue-500" />
-              <span className="text-sm font-medium text-zinc-700">Website Builder</span>
+              <span className="text-sm font-medium text-zinc-700">
+                Website Builder
+              </span>
               <button
                 className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-full p-2"
                 onClick={() => setShowPreviewPane(false)}
                 aria-label="Close Preview Pane"
               >
                 <XIcon size={20} />
-                    </button>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-                <PreviewPane
-                htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
+              <PreviewPane
+                htmlVersions={htmlVersions.map(
+                  (v: { htmlContent: string }) => v.htmlContent
+                )}
                 deployedVersionIndex={project?.currentHtmlIndex ?? null}
                 onDeploy={handleDeploy}
                 isUploading={deployMutation.isPending}
                 domain={deployedUrl}
-                  isPreviewLoading={isPreviewLoading}
+                isPreviewLoading={isPreviewLoading}
                 projectId={projectId as string}
                 deployedUrl={deployedUrl}
                 assets={project?.assets || []}
@@ -223,7 +273,9 @@ export default function Home() {
             {/* Header for desktop */}
             <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
               <GlobeIcon size={18} className="text-blue-500" />
-              <span className="text-sm font-medium text-zinc-700">Website Builder</span>
+              <span className="text-sm font-medium text-zinc-700">
+                Website Builder
+              </span>
             </div>
             <PreviewPane
               htmlVersions={htmlVersions.map(
