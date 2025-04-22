@@ -1,11 +1,10 @@
-"use client"; 
+"use client";
 
 import { Toaster } from "sonner";
 import "./globals.css";
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Suspense, useState } from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
-
 
 export default function RootLayout({
   children,
@@ -18,7 +17,9 @@ export default function RootLayout({
       <body>
         <Toaster position="top-center" richColors />
         <QueryClientProvider client={queryClient}>
-          <NuqsAdapter>{children}</NuqsAdapter>
+          <Suspense>
+            <NuqsAdapter>{children}</NuqsAdapter>
+          </Suspense>
         </QueryClientProvider>
       </body>
     </html>
