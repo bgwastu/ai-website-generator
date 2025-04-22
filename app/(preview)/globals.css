@@ -2,18 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-    font-family: "uncut sans";
-    src: url("./uncut-sans.woff2") format("woff2");
-}
-
-* {
-    font-family: "uncut sans", sans-serif;
-}
-
-
 @layer utilities {
-    .text-balance {
-        text-wrap: balance;
-    }
+  .text-balance {
+    text-wrap: balance;
+  }
 }
