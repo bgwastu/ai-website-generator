@@ -4,6 +4,7 @@ import { Message } from "@/components/message";
 import { AlertTriangle, PaperclipIcon, RotateCcw, XCircle } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { Message as MessageType, useChat } from "@ai-sdk/react";
 
 export type Attachment = {
   name: string;
@@ -11,24 +12,28 @@ export type Attachment = {
   contentType: string;
 };
 
+function isWebsiteToolLoading(message: MessageType) {
+  if (!message?.parts) return false;
+  return message.parts.some(
+    (part: any) =>
+      part.type === "tool-invocation" &&
+      part.toolInvocation.toolName === "websiteGenerator" &&
+      part.toolInvocation.state !== "result"
+  );
+}
+
 export function Chat({
-  messages,
-  input,
-  setInput,
-  handleSubmit,
-  append,
-  status,
-  error,
-  reload,
+  projectId,
+  initialMessage,
+  onPreviewLoadingChange,
+  initialMessages,
+  onChatFinished,
 }: {
-  messages: any[];
-  input: string;
-  setInput: (v: string) => void;
-  handleSubmit: (e: any, options?: any) => void;
-  append: (msg: any) => void;
-  status: string;
-  error: any;
-  reload: () => void;
+  projectId: string;
+  initialMessage?: string | null;
+  onPreviewLoadingChange: (loading: boolean) => void;
+  initialMessages?: MessageType[];
+  onChatFinished?: () => void;
 }) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentPreviews, setAttachmentPreviews] = useState<
@@ -38,6 +43,68 @@ export function Chat({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [hasSentInitial, setHasSentInitial] = useState(false);
+
+  const {
+    messages,
+    input,
+    setInput,
+    handleSubmit,
+    append,
+    status,
+    error,
+    reload,
+    setMessages,
+  } = useChat({
+    api: projectId ? `/api/project/${projectId}/chat` : undefined,
+    onError: (error) => {
+      console.error("Chat error:", error);
+      toast.error(`An error occurred: ${error.message}`);
+    },
+    onFinish: () => {
+      inputRef.current?.focus();
+      if (onChatFinished) onChatFinished();
+    },
+  });
+
+  // Hydrate chat with initialMessages if provided and messages is empty
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0 && messages.length === 0) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages, messages.length, setMessages]);
+
+  // Send initial message if provided and not already sent
+  useEffect(() => {
+    if (
+      initialMessage &&
+      !hasSentInitial &&
+      messages.length === 0 &&
+      projectId
+    ) {
+      append({
+        id: Math.random().toString(36).slice(2),
+        role: "user",
+        content: initialMessage,
+        createdAt: new Date(),
+      });
+      setHasSentInitial(true);
+    }
+    // Reset hasSentInitial if projectId changes
+    if (!initialMessage) setHasSentInitial(false);
+  }, [initialMessage, hasSentInitial, messages.length, projectId, append]);
+
+  // Compute isPreviewLoading and notify parent
+  useEffect(() => {
+    let isPreviewLoading = false;
+    if (messages.length > 0) {
+      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+      if (lastAssistant && isWebsiteToolLoading(lastAssistant)) {
+        isPreviewLoading = true;
+      }
+    }
+    onPreviewLoadingChange(isPreviewLoading);
+  }, [messages, onPreviewLoadingChange]);
 
   // Suggestions for quick actions
   const suggestedActions = [
@@ -322,28 +389,7 @@ export function Chat({
         )}
         <form
           className="flex flex-col gap-2 relative items-center"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (isLoadingAttachments) {
-              toast.error("Please wait for attachments to finish loading");
-              return;
-            }
-            handleSubmit(e, {
-              experimental_attachments: attachmentPreviews
-                .map((preview, index) => {
-                  const file = attachments[index];
-                  if (!file) return null;
-                  return {
-                    name: file.name,
-                    url: preview.url,
-                    contentType: file.type,
-                  };
-                })
-                .filter((attachment): attachment is Attachment => attachment !== null),
-            });
-            setAttachments([]);
-            setAttachmentPreviews([]);
-          }}
+          onSubmit={handleSubmit}
         >
           <div className="relative w-full md:max-w-[500px] flex flex-col items-center gap-2">
             <input

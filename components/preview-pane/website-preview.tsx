@@ -37,8 +37,8 @@ export interface WebsitePreviewProps {
   deployedVersionIndex: number | null;
   onDeploy: (html: string, versionIndex: number) => void;
   isUploading: boolean;
-  uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
   isPreviewLoading: boolean;
+  deployedUrl?: string;
 }
 
 const WebsitePreview: React.FC<WebsitePreviewProps> = ({
@@ -46,8 +46,8 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   deployedVersionIndex,
   onDeploy,
   isUploading,
-  uploadResult,
   isPreviewLoading,
+  deployedUrl,
 }) => {
   const [currentVersionIndex, setCurrentVersionIndex] = useState(
     htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
@@ -131,6 +131,11 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
               </button>
               <span className="mx-1 text-zinc-600 flex items-center gap-1 text-sm">
                 {`Version ${versionNumber}`}
+                {isDeployed && (
+                  <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
+                    Deployed
+                  </span>
+                )}
               </span>
               <button
                 onClick={(e) => {
@@ -147,35 +152,16 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
               >
                 <ChevronRightIcon size={14} />
               </button>
-              {isDeployed && (
-                <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
-                  Deployed
-                </span>
-              )}
             </div>
           )}
           <div className="flex items-center gap-2 ml-auto">
-            {uploadResult?.success && uploadResult?.url && isDeployed ? (
-              <a
-                href={uploadResult.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-0.5 rounded text-xs bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
-                title={`View deployed site: ${uploadResult.url}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                <ExternalLinkIcon size={12} /> See the site
-              </a>
-            ) : null}
             {!isDeployed && htmlContent && (
               <button
                 onClick={() => onDeploy(htmlContent, currentVersionIndex)}
                 disabled={isUploading || !htmlContent}
                 className={`ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                {isUploading ? "Deploying..." : "Deploy this version"}
+                {isUploading ? "Deploying..." : "Deploy"}
               </button>
             )}
           </div>

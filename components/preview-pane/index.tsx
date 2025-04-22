@@ -4,15 +4,18 @@ import { GlobeIcon } from "lucide-react";
 import React, { useState } from "react";
 import ImageUpload from "./image-upload";
 import WebsitePreview from "./website-preview";
+import { Asset } from '@/lib/query';
 
 export interface PreviewPaneProps {
   htmlVersions: string[];
   deployedVersionIndex: number | null;
   onDeploy: (html: string, versionIndex: number) => void;
   isUploading: boolean;
-  uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
   domain: string | null;
   isPreviewLoading: boolean;
+  projectId: string;
+  deployedUrl: string | null;
+  assets: Asset[];
 }
 
 const PreviewPane: React.FC<PreviewPaneProps> = ({
@@ -20,9 +23,11 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
   deployedVersionIndex,
   onDeploy,
   isUploading,
-  uploadResult,
   domain,
   isPreviewLoading,
+  projectId,
+  deployedUrl,
+  assets,
 }) => {
   const [activeTab, setActiveTab] = useState<"version" | "files">("version");
 
@@ -56,11 +61,10 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
             deployedVersionIndex={deployedVersionIndex}
             onDeploy={onDeploy}
             isUploading={isUploading}
-            uploadResult={uploadResult}
             isPreviewLoading={isPreviewLoading}
           />
         ) : (
-          <ImageUpload domain={domain} />
+          <ImageUpload projectId={projectId} deployedUrl={deployedUrl} assets={assets} />
         )}
       </div>
     </div>
