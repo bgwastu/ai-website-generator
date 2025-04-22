@@ -1,10 +1,9 @@
 "use client";
 
-import { GlobeIcon } from "lucide-react";
+import { Asset } from "@/lib/query";
 import React, { useState } from "react";
 import ImageUpload from "./image-upload";
 import WebsitePreview from "./website-preview";
-import { Asset } from '@/lib/query';
 
 export interface PreviewPaneProps {
   htmlVersions: string[];
@@ -23,7 +22,6 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
   deployedVersionIndex,
   onDeploy,
   isUploading,
-  domain,
   isPreviewLoading,
   projectId,
   deployedUrl,
@@ -36,13 +34,21 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
       {/* Tabs */}
       <div className="flex gap-1 px-4 pt-2 bg-white border-b border-zinc-100">
         <button
-          className={`px-3 py-1 rounded-t text-sm font-medium focus:outline-none ${activeTab === "version" ? "bg-zinc-50 border-x border-t border-zinc-200 text-blue-700" : "text-zinc-500 hover:text-blue-700"}`}
+          className={`px-3 py-1 rounded-t text-sm font-medium focus:outline-none ${
+            activeTab === "version"
+              ? "bg-zinc-50 border-x border-t border-zinc-200 text-blue-700"
+              : "text-zinc-500 hover:text-blue-700"
+          }`}
           onClick={() => setActiveTab("version")}
         >
           Web Preview
         </button>
         <button
-          className={`px-3 py-1 rounded-t text-sm font-medium focus:outline-none ${activeTab === "files" ? "bg-zinc-50 border-x border-t border-zinc-200 text-blue-700" : "text-zinc-500 hover:text-blue-700"}`}
+          className={`px-3 py-1 rounded-t text-sm font-medium focus:outline-none ${
+            activeTab === "files"
+              ? "bg-zinc-50 border-x border-t border-zinc-200 text-blue-700"
+              : "text-zinc-500 hover:text-blue-700"
+          }`}
           onClick={() => setActiveTab("files")}
         >
           Your Images
@@ -55,11 +61,16 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
             htmlVersions={htmlVersions}
             deployedVersionIndex={deployedVersionIndex}
             onDeploy={onDeploy}
+            deployedUrl={deployedUrl}
             isUploading={isUploading}
             isPreviewLoading={isPreviewLoading}
           />
         ) : (
-          <ImageUpload projectId={projectId} deployedUrl={deployedUrl} assets={assets} />
+          <ImageUpload
+            projectId={projectId}
+            deployedUrl={deployedUrl}
+            assets={assets}
+          />
         )}
       </div>
     </div>

@@ -57,21 +57,21 @@ export default function Home() {
     },
     onSuccess: (data) => {
       toast.success(
-        <div className="flex flex-col gap-1 items-start">
+          <div className="flex flex-col gap-1 items-start">
           <span>Website deployed successfully!</span>
           {data.url && (
-            <a
+              <a
               href={data.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-              onClick={(e) => e.stopPropagation()}
-            >
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
+                onClick={(e) => e.stopPropagation()}
+              >
               {data.url}
-            </a>
-          )}
-        </div>
-      );
+              </a>
+            )}
+          </div>
+        );
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
     onError: (error: any) => {
@@ -179,16 +179,16 @@ export default function Home() {
                 aria-label="Close Preview Pane"
               >
                 <XIcon size={20} />
-              </button>
+                    </button>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <PreviewPane
+                <PreviewPane
                 htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
                 deployedVersionIndex={project?.currentHtmlIndex ?? null}
                 onDeploy={handleDeploy}
                 isUploading={deployMutation.isPending}
                 domain={deployedUrl}
-                isPreviewLoading={isPreviewLoading}
+                  isPreviewLoading={isPreviewLoading}
                 projectId={projectId as string}
                 deployedUrl={deployedUrl}
                 assets={project?.assets || []}

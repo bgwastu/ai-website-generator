@@ -5,6 +5,7 @@ import {
   ChevronRightIcon,
   ExternalLinkIcon,
   MaximizeIcon,
+  UploadIcon,
   XIcon,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -38,7 +39,7 @@ export interface WebsitePreviewProps {
   onDeploy: (html: string, versionIndex: number) => void;
   isUploading: boolean;
   isPreviewLoading: boolean;
-  deployedUrl?: string;
+  deployedUrl: string | null;
 }
 
 const WebsitePreview: React.FC<WebsitePreviewProps> = ({
@@ -155,15 +156,31 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
             </div>
           )}
           <div className="flex items-center gap-2 ml-auto">
-            {!isDeployed && htmlContent && (
+            {isDeployed && deployedUrl ? (
+              <a
+                href={deployedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors flex items-center gap-1"
+                title={`View deployed site: ${deployedUrl}`}
+                onClick={e => e.stopPropagation()}
+              >
+                <ExternalLinkIcon size={14} /> See the site
+              </a>
+            ) : isDeployed && !deployedUrl ? (
+              <span className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white flex items-center gap-1 select-none">
+                <UploadIcon size={14} className="opacity-60" /> Deployed
+              </span>
+            ) : !isDeployed && htmlContent ? (
               <button
                 onClick={() => onDeploy(htmlContent, currentVersionIndex)}
                 disabled={isUploading || !htmlContent}
-                className={`ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+                className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
+                <UploadIcon size={14} />
                 {isUploading ? "Deploying..." : "Deploy"}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       )}
