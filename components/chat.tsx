@@ -97,8 +97,8 @@ export function Chat({
   };
 
   return (
-    <div className="flex flex-col justify-between flex-1">
-      <div className="flex flex-col flex-grow items-center overflow-y-scroll px-4">
+    <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 items-center overflow-y-auto px-4">
         {messages.length === 0 && (
           <motion.div className="h-[350px] w-full md:w-[500px] pt-20">
             <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">

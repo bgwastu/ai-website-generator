@@ -195,7 +195,7 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen container mx-auto max-w-screen-xl">
+    <div className="h-screen">
       {/* Floating toggle button for mobile */}
       {!showPreviewPane && (
         <button
@@ -251,17 +251,19 @@ export default function Home() {
         layout
         className="flex flex-col md:flex-row h-screen gap-2 pb-4"
       >
-        <Chat
-          projectId={projectId}
-          initialMessage={initialMessage}
-          onPreviewLoadingChange={setIsPreviewLoading}
-          initialMessages={project?.messages || []}
-          onChatFinished={() =>
-            queryClient.invalidateQueries({ queryKey: ["project", projectId] })
-          }
-        />
+        <div className="flex-1 w-full max-w-[600px] mx-auto">
+          <Chat
+            projectId={projectId}
+            initialMessage={initialMessage}
+            onPreviewLoadingChange={setIsPreviewLoading}
+            initialMessages={project?.messages || []}
+            onChatFinished={() =>
+              queryClient.invalidateQueries({ queryKey: ["project", projectId] })
+            }
+          />
+        </div>
         {/* Desktop Preview Pane */}
-        <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full flex-1">
+        <div className="hidden md:flex flex-1 flex-col h-full">
           <motion.div
             className="h-full flex-1 flex flex-col"
             layout
