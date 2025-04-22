@@ -88,7 +88,7 @@ ${context}`,
 
       if (status === "update") {
         result = await generateText({
-          model: openai("gpt-4.1-neno"),
+          model: openai("gpt-4.1-nano"),
           system: `IMPORTANT: You are an expert website patching tool. You must follow these requirements EXACTLY:
 
 - You are given the current HTML of a single-page website and a user request to update or modify it.
