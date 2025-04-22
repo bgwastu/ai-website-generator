@@ -2,9 +2,9 @@
 
 import { Chat } from "@/components/chat";
 import PreviewPane from "@/components/preview-pane";
-import { Message as MessageType } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { ChevronLeft, GlobeIcon, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -104,6 +104,8 @@ export default function Home() {
     }
   };
 
+  const [showPreviewPane, setShowPreviewPane] = useState(false);
+
   // Landing page if no projectId
   if (!projectId) {
     return (
@@ -151,6 +153,50 @@ export default function Home() {
 
   return (
     <div className="h-screen">
+      {/* Floating toggle button for mobile */}
+      {!showPreviewPane && (
+        <button
+          className="fixed z-40 top-4 right-4 md:hidden bg-white text-blue-700 border border-blue-200 rounded-full px-3 py-1 flex items-center gap-1 shadow focus:outline-none text-sm"
+          onClick={() => setShowPreviewPane(true)}
+          aria-label="Show Preview Pane"
+        >
+          <ChevronLeft size={18} />
+          <span>Preview</span>
+        </button>
+      )}
+      {/* Mobile Preview Pane Drawer */}
+      {showPreviewPane && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowPreviewPane(false)} />
+          <div className="relative ml-auto w-full max-w-md h-full bg-white shadow-xl flex flex-col">
+            {/* Header moved here */}
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
+              <GlobeIcon size={18} className="text-blue-500" />
+              <span className="text-sm font-medium text-zinc-700">Website Builder</span>
+              <button
+                className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-full p-2"
+                onClick={() => setShowPreviewPane(false)}
+                aria-label="Close Preview Pane"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <PreviewPane
+                htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
+                deployedVersionIndex={project?.currentHtmlIndex ?? null}
+                onDeploy={handleDeploy}
+                isUploading={deployMutation.isPending}
+                domain={deployedUrl}
+                isPreviewLoading={isPreviewLoading}
+                projectId={projectId as string}
+                deployedUrl={deployedUrl}
+                assets={project?.assets || []}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       <motion.div
         layout
         className="flex flex-col md:flex-row h-screen gap-2 pb-4"
@@ -164,6 +210,7 @@ export default function Home() {
             queryClient.invalidateQueries({ queryKey: ["project", projectId] })
           }
         />
+        {/* Desktop Preview Pane */}
         <div className="hidden md:flex md:flex-[1.4] flex-col w-[420px] max-w-[40vw] h-full flex-1">
           <motion.div
             className="h-full flex-1 flex flex-col"
@@ -173,6 +220,11 @@ export default function Home() {
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
+            {/* Header for desktop */}
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
+              <GlobeIcon size={18} className="text-blue-500" />
+              <span className="text-sm font-medium text-zinc-700">Website Builder</span>
+            </div>
             <PreviewPane
               htmlVersions={htmlVersions.map(
                 (v: { htmlContent: string }) => v.htmlContent

@@ -33,11 +33,6 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
 
   return (
     <div className="border border-zinc-200 rounded-md h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white">
-        <GlobeIcon size={18} className="text-blue-500" />
-        <span className="text-sm font-medium text-zinc-700">Website Builder</span>
-      </div>
       {/* Tabs */}
       <div className="flex gap-1 px-4 pt-2 bg-white border-b border-zinc-100">
         <button
