@@ -33,35 +33,56 @@ function injectLinkHandler(html: string): string {
 }
 
 export interface WebsitePreviewProps {
-  htmlContent: string;
-  isPreviewLoading?: boolean;
-  currentVersionIndex: number;
-  totalVersions: number;
-  onPreviousVersion: () => void;
-  onNextVersion: () => void;
-  isUploading: boolean;
-  onDeploy: () => void;
-  uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
+  htmlVersions: string[];
   deployedVersionIndex: number | null;
+  onDeploy: (html: string, versionIndex: number) => void;
+  isUploading: boolean;
+  uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
+  isPreviewLoading: boolean;
 }
 
 const WebsitePreview: React.FC<WebsitePreviewProps> = ({
-  htmlContent,
-  isPreviewLoading = false,
-  currentVersionIndex,
-  totalVersions,
-  onPreviousVersion,
-  onNextVersion,
-  isUploading,
-  onDeploy,
-  uploadResult,
+  htmlVersions,
   deployedVersionIndex,
+  onDeploy,
+  isUploading,
+  uploadResult,
+  isPreviewLoading,
 }) => {
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(
+    htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalIframeRef = useRef<HTMLIFrameElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Keep currentVersionIndex in sync with htmlVersions length
+  useEffect(() => {
+    if (htmlVersions.length === 0) {
+      setCurrentVersionIndex(0);
+    } else if (currentVersionIndex > htmlVersions.length - 1) {
+      setCurrentVersionIndex(htmlVersions.length - 1);
+    } else if (currentVersionIndex === htmlVersions.length - 2) {
+      // If a new version is added, jump to the latest
+      setCurrentVersionIndex(htmlVersions.length - 1);
+    }
+  }, [htmlVersions.length]);
+
+  const goToPreviousVersion = () => {
+    setCurrentVersionIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  };
+  const goToNextVersion = () => {
+    setCurrentVersionIndex((prev) =>
+      prev < htmlVersions.length - 1 ? prev + 1 : prev
+    );
+  };
+
+  const htmlContent = htmlVersions[currentVersionIndex] || "";
   const safeHtmlContent = injectLinkHandler(htmlContent);
+  const versionNumber = currentVersionIndex + 1;
+  const hasPreviousVersion = currentVersionIndex > 0;
+  const hasNextVersion = currentVersionIndex < htmlVersions.length - 1;
+  const isDeployed = deployedVersionIndex === currentVersionIndex;
 
   useEffect(() => {
     if (isModalOpen) {
@@ -87,73 +108,79 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
     };
   }, [isModalOpen]);
 
-  const versionNumber = currentVersionIndex + 1;
-  const hasPreviousVersion = currentVersionIndex > 0;
-  const hasNextVersion = currentVersionIndex < totalVersions - 1;
-  const isDeployed = deployedVersionIndex === currentVersionIndex;
-
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="bg-zinc-50 px-3 py-2 flex items-center gap-2 border-b border-zinc-200">
-        {totalVersions > 0 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPreviousVersion();
-              }}
-              disabled={!hasPreviousVersion}
-              className={`p-1 rounded ${
-                hasPreviousVersion
-                  ? "text-zinc-700 hover:bg-zinc-200"
-                  : "text-zinc-400 cursor-not-allowed"
-              }`}
-              title="Previous version"
-            >
-              <ChevronLeftIcon size={14} />
-            </button>
-            <span className="mx-1 text-zinc-600 flex items-center gap-1 text-sm">
-              {`Version ${versionNumber}`}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onNextVersion();
-              }}
-              disabled={!hasNextVersion}
-              className={`p-1 rounded ${
-                hasNextVersion
-                  ? "text-zinc-700 hover:bg-zinc-200"
-                  : "text-zinc-400 cursor-not-allowed"
-              }`}
-              title="Next version"
-            >
-              <ChevronRightIcon size={14} />
-            </button>
-            {isDeployed && (
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
-                Deployed
+      {htmlContent && (
+        <div className="bg-zinc-50 px-3 py-2 flex items-center gap-2 border-b border-zinc-200">
+          {htmlVersions.length > 0 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPreviousVersion();
+                }}
+                disabled={!hasPreviousVersion}
+                className={`p-1 rounded ${
+                  hasPreviousVersion
+                    ? "text-zinc-700 hover:bg-zinc-200"
+                    : "text-zinc-400 cursor-not-allowed"
+                }`}
+                title="Previous version"
+              >
+                <ChevronLeftIcon size={14} />
+              </button>
+              <span className="mx-1 text-zinc-600 flex items-center gap-1 text-sm">
+                {`Version ${versionNumber}`}
               </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNextVersion();
+                }}
+                disabled={!hasNextVersion}
+                className={`p-1 rounded ${
+                  hasNextVersion
+                    ? "text-zinc-700 hover:bg-zinc-200"
+                    : "text-zinc-400 cursor-not-allowed"
+                }`}
+                title="Next version"
+              >
+                <ChevronRightIcon size={14} />
+              </button>
+              {isDeployed && (
+                <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
+                  Deployed
+                </span>
+              )}
+            </div>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            {uploadResult?.success && uploadResult?.url && isDeployed ? (
+              <a
+                href={uploadResult.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-0.5 rounded text-xs bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
+                title={`View deployed site: ${uploadResult.url}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <ExternalLinkIcon size={12} /> See the site
+              </a>
+            ) : null}
+            {!isDeployed && htmlContent && (
+              <button
+                onClick={() => onDeploy(htmlContent, currentVersionIndex)}
+                disabled={isUploading || !htmlContent}
+                className={`ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isUploading ? "Deploying..." : "Deploy this version"}
+              </button>
             )}
           </div>
-        )}
-        <div className="flex items-center gap-2 ml-auto">
-          {uploadResult?.success && uploadResult?.url && isDeployed ? (
-            <a
-              href={uploadResult.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-2 py-0.5 rounded text-xs bg-green-500 text-white cursor-pointer hover:bg-green-600 flex items-center gap-1"
-              title={`View deployed site: ${uploadResult.url}`}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <ExternalLinkIcon size={12} /> See the site
-            </a>
-          ) : null}
         </div>
-      </div>
+      )}
       <div
         className="flex-grow overflow-auto relative cursor-pointer group min-h-0"
         onClick={() => setIsModalOpen(true)}
@@ -178,7 +205,6 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
               minHeight: 0,
               height: "100%",
             }}
-            scrolling="auto"
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-zinc-400 text-sm">
@@ -207,10 +233,10 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
                 <span className="text-sm font-medium text-zinc-700">
                   Website Preview
                 </span>
-                {totalVersions > 0 && (
+                {htmlVersions.length > 0 && (
                   <div className="flex items-center border-l border-zinc-300 pl-2 ml-2 gap-1">
                     <button
-                      onClick={onPreviousVersion}
+                      onClick={goToPreviousVersion}
                       disabled={!hasPreviousVersion}
                       className={`p-1 rounded ${
                         hasPreviousVersion
@@ -230,7 +256,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
                       )}
                     </span>
                     <button
-                      onClick={onNextVersion}
+                      onClick={goToNextVersion}
                       disabled={!hasNextVersion}
                       className={`p-1 rounded ${
                         hasNextVersion

@@ -1,15 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
-import WebsitePreview, { WebsitePreviewProps } from "./website-preview";
-import ImageUpload from "./image-upload";
 import { GlobeIcon } from "lucide-react";
+import React, { useState } from "react";
+import ImageUpload from "./image-upload";
+import WebsitePreview from "./website-preview";
 
-export interface PreviewPaneProps extends WebsitePreviewProps {
+export interface PreviewPaneProps {
+  htmlVersions: string[];
+  deployedVersionIndex: number | null;
+  onDeploy: (html: string, versionIndex: number) => void;
+  isUploading: boolean;
+  uploadResult: { success: boolean; message: string; url?: string; domain?: string } | null;
   domain: string | null;
+  isPreviewLoading: boolean;
 }
 
-const PreviewPane: React.FC<PreviewPaneProps> = (props) => {
+const PreviewPane: React.FC<PreviewPaneProps> = ({
+  htmlVersions,
+  deployedVersionIndex,
+  onDeploy,
+  isUploading,
+  uploadResult,
+  domain,
+  isPreviewLoading,
+}) => {
   const [activeTab, setActiveTab] = useState<"version" | "files">("version");
 
   return (
@@ -37,9 +51,16 @@ const PreviewPane: React.FC<PreviewPaneProps> = (props) => {
       {/* Tab Content */}
       <div className="flex-1 flex flex-col min-h-0">
         {activeTab === "version" ? (
-          <WebsitePreview {...props} />
+          <WebsitePreview
+            htmlVersions={htmlVersions}
+            deployedVersionIndex={deployedVersionIndex}
+            onDeploy={onDeploy}
+            isUploading={isUploading}
+            uploadResult={uploadResult}
+            isPreviewLoading={isPreviewLoading}
+          />
         ) : (
-          <ImageUpload domain={props.domain} />
+          <ImageUpload domain={domain} />
         )}
       </div>
     </div>
