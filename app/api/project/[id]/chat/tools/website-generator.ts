@@ -44,17 +44,19 @@ export const websiteGenerator = tool({
       .enum(["initial", "update"])
       .describe(
         "The status of the website. If you need to start from scratch, set this to 'initial'. If you need to update the website, set this to 'update'."
-      ).default("initial"),
+      )
+      .default("initial"),
     context: z
       .string()
       .describe(
         "Raw content to be displayed on the website, such as extracted text or data from PDFs, documents, or any other source. This content will be used to generate or update the website's sections as needed. MAKE SURE TO INCLUDE ALL THE RAW CONTENT IN THE CONTEXT."
-      ).default(""),
+      )
+      .default(""),
   }),
   execute: async ({ currentHtml, updateInstructions, context, status }) => {
     try {
       let result = await generateText({
-        model: openai("gpt-4.1-mini"),
+        model: openai("gpt-4.1"),
         system: `IMPORTANT: You are an expert website generator tool. You must follow these requirements EXACTLY:
 
 - The website you generate MUST be a single-page app (SPA) in ONE complete HTML file. DO NOT split into multiple files. The HTML must be as complete as possible.
