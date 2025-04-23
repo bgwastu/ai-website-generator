@@ -56,7 +56,7 @@ export const websiteGenerator = tool({
   execute: async ({ currentHtml, updateInstructions, context, status }) => {
     try {
       let result = await generateText({
-        model: openai("gpt-4.1"),
+        model: openai("gpt-4.1-mini"),
         system: `IMPORTANT: You are an expert website generator tool. You must follow these requirements EXACTLY:
 
 - The website you generate MUST be a single-page app (SPA) in ONE complete HTML file. DO NOT split into multiple files. The HTML must be as complete as possible.

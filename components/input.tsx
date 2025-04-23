@@ -1,5 +1,6 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { PaperclipIcon } from "lucide-react";
+import { ArrowUpIcon, PaperclipIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export type AttachmentPreview = {
   id: number;
@@ -40,7 +41,8 @@ export default function Input({
       textarea.style.height = "auto";
       const maxHeight = 5 * 24 + 16; // 5 lines * line-height + padding
       textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + "px";
-      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+      textarea.style.overflowY =
+        textarea.scrollHeight > maxHeight ? "auto" : "hidden";
     }
   }, [value]);
 
@@ -84,19 +86,18 @@ export default function Input({
       "application/pdf",
     ];
     if (attachments.length + files.length > maxFiles) {
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.toast) window.toast.error(`You can only attach up to ${maxFiles} files at once.`);
+      toast.error(`You can only attach up to ${maxFiles} files at once.`);
       return;
     }
     Array.from(files).forEach((file) => {
       if (!validTypes.includes(file.type)) {
-        // @ts-ignore
-        if (typeof window !== 'undefined' && window.toast) window.toast.error(`Invalid file type: ${file.name}. Only images and PDFs are allowed.`);
+        toast.error(
+          `Invalid file type: ${file.name}. Only images and PDFs are allowed.`
+        );
         return;
       }
       if (file.size > maxSize) {
-        // @ts-ignore
-        if (typeof window !== 'undefined' && window.toast) window.toast.error(`File too large: ${file.name}. Maximum size is 10MB.`);
+        toast.error(`File too large: ${file.name}. Maximum size is 10MB.`);
         return;
       }
       const reader = new FileReader();
@@ -133,7 +134,8 @@ export default function Input({
     if (!isMobile) {
       if (e.key === "Enter" && !e.metaKey && !e.shiftKey) {
         e.preventDefault();
-        if (!disabled && !loading && (value.trim() || attachments.length > 0)) handleSend();
+        if (!disabled && !loading && (value.trim() || attachments.length > 0))
+          handleSend();
       } // Cmd+Enter or Shift+Enter for newline
     }
     // On mobile, Enter inserts new line by default
@@ -141,15 +143,22 @@ export default function Input({
 
   return (
     <div
-      className={`w-full bg-white border border-zinc-200 rounded-xl p-2 flex flex-col gap-1 shadow-sm relative ${dragActive ? "ring-2 ring-blue-400" : ""} ${className}`}
+      className={`w-full bg-white border border-zinc-200 rounded-lg p-2 flex flex-col gap-1 shadow-sm relative ${
+        dragActive ? "ring-2 ring-blue-400" : ""
+      } ${className}`}
     >
       {/* Attachment previews */}
       {attachments.length > 0 && !disableAttachments && (
         <div className="flex flex-wrap gap-2 mb-1">
           {attachments.map((file, idx) => (
-            <div key={file.id} className="flex items-center bg-zinc-50 border border-zinc-200 rounded px-2 py-1 text-xs max-w-[180px]">
+            <div
+              key={file.id}
+              className="flex items-center bg-zinc-50 border border-zinc-200 rounded px-2 py-1 text-xs max-w-[180px]"
+            >
               <span className="truncate mr-2">{file.name}</span>
-              <span className="text-zinc-400 ml-1">{(file.size / 1024 / 1024).toFixed(2)}MB</span>
+              <span className="text-zinc-400 ml-1">
+                {(file.size / 1024 / 1024).toFixed(2)}MB
+              </span>
               <button
                 type="button"
                 className="ml-2 text-zinc-400 hover:text-red-500"
@@ -167,7 +176,7 @@ export default function Input({
         className="bg-transparent resize-none outline-none px-2 py-1 text-zinc-800 text-base min-h-[32px] max-h-[152px] w-full"
         placeholder={placeholder}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         rows={1}
         onKeyDown={handleKeyDown}
         disabled={disabled || loading}
@@ -189,7 +198,7 @@ export default function Input({
               ref={fileInputRef}
               style={{ display: "none" }}
               multiple
-              onChange={e => {
+              onChange={(e) => {
                 if (e.target.files) {
                   handleAttachmentAdd(e.target.files);
                   e.target.value = "";
@@ -200,17 +209,16 @@ export default function Input({
         )}
         <button
           type="button"
-          className={`bg-blue-600 text-white rounded flex items-center justify-center disabled:opacity-50 transition p-1`}
-          style={{ width: 28, height: 21 }}
+          className={`bg-gray-600 text-white rounded flex items-center justify-center disabled:opacity-50 transition p-1`}
           onClick={handleSend}
-          disabled={disabled || loading || (!value.trim() && attachments.length === 0)}
+          disabled={
+            disabled || loading || (!value.trim() && attachments.length === 0)
+          }
         >
           {/* Arrow up icon, 4x3 symmetry, small */}
-          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 12V1M8 1L2 7M8 1l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ArrowUpIcon className="w-4 h-4" />
         </button>
       </div>
     </div>
   );
-} 
+}
