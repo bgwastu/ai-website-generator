@@ -14,22 +14,20 @@ import { toast } from "sonner";
 
 function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
   if (!messages || messages.length === 0) return false;
-  const lastAssistant = [...messages]
-    .reverse()
-    .find((m) => m.role === "assistant");
-  if (
-    lastAssistant &&
-    lastAssistant.parts &&
-    lastAssistant.parts.some(
-      (part: any) =>
+
+  // Check if ANY assistant message has an active 'createWebsite' or 'updateWebsite' tool call
+  return messages.some((m) => {
+    if (m.role !== "assistant" || !m.parts) return false;
+
+    return m.parts.some((part: any) => {
+      return (
         part.type === "tool-invocation" &&
-        part.toolInvocation.toolName === "websiteGenerator" &&
+        (part.toolInvocation.toolName === "createWebsite" ||
+          part.toolInvocation.toolName === "updateWebsite") &&
         part.toolInvocation.state !== "result"
-    )
-  ) {
-    return true;
-  }
-  return false;
+      );
+    });
+  });
 }
 
 export default function Home() {
@@ -171,7 +169,7 @@ export default function Home() {
     ) {
       setMessages(project.messages);
     }
-  }, [project?.messages, messages?.length, setMessages]);
+  }, [project?.messages, messages?.length, setMessages, status]);
 
   // Handle pending message after projectId is set and useChat is initialized
   useEffect(() => {

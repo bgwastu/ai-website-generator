@@ -59,8 +59,7 @@ export async function deleteDomain(domain: string): Promise<boolean> {
 }
 
 export async function deployHtmlToDomain(domain: string, html: string): Promise<string> {
-  const publicUrlBase = process.env.NEXT_PUBLIC_R2_PUBLIC_URL!;
   const key = `website-generator/${domain}/index.html`;
   await putObject(key, html, 'text/html');
-  return `${publicUrlBase}/${key}`;
+  return `${domain}/${key}`;
 } 

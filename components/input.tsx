@@ -74,6 +74,44 @@ export default function Input({
     };
   }, [attachments, disableAttachments]);
 
+  // Paste image functionality
+  useEffect(() => {
+    if (disableAttachments) return;
+    
+    const handlePaste = (e: ClipboardEvent) => {
+      if (disabled || loading) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      const imageItems = Array.from(items).filter(item => 
+        item.type.startsWith('image/')
+      );
+      
+      if (imageItems.length === 0) return;
+      
+      e.preventDefault();
+      
+      const files = imageItems.map(item => {
+        const blob = item.getAsFile();
+        if (!blob) return null;
+        
+        // Create a file with a generated name from the blob
+        const fileType = item.type.split('/')[1] || 'png';
+        const fileName = `pasted-image-${new Date().getTime()}.${fileType}`;
+        
+        return new File([blob], fileName, { type: item.type });
+      }).filter(Boolean) as File[];
+      
+      if (files.length > 0) {
+        handleAttachmentAdd(files);
+      }
+    };
+    
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [attachments, disableAttachments, disabled, loading]);
+
   // Attachment logic
   const handleAttachmentAdd = (files: FileList | File[]) => {
     const maxFiles = 5;

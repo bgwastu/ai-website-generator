@@ -2,7 +2,7 @@ import Input, { AttachmentPreview } from "@/components/input";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { AlertTriangle, BotIcon, Loader, RotateCcw, UserIcon } from "lucide-react";
+import { AlertTriangle, BotIcon, Clock, Loader, RotateCcw, UserIcon, Wrench } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 import { Markdown } from "./markdown";
@@ -16,38 +16,47 @@ export interface ChatProps {
   reload: () => void;
 }
 
-function getHtmlArtifactFromMessage(message: MessageType) {
+// Extended type for tool results
+interface ToolResult {
+  htmlVersionId?: string;
+  message?: string;
+  success?: boolean;
+}
+
+// Get info about the tool call in the message
+function getToolCallInfo(message: MessageType) {
   if (!message.parts) return null;
   for (const part of message.parts) {
-    if (
-      part.type === "tool-invocation" &&
-      part.toolInvocation.toolName === "websiteGenerator" &&
-      part.toolInvocation.state === "result" &&
-      part.toolInvocation.result
-    ) {
-      return part.toolInvocation.result.htmlContent;
+    if (part.type === "tool-invocation") {
+      return {
+        toolName: part.toolInvocation.toolName,
+        state: part.toolInvocation.state,
+        result: part.toolInvocation.state === 'result' ? (part.toolInvocation.result as ToolResult | undefined) : undefined
+      };
     }
   }
   return null;
 }
 
-function isWebsiteToolLoading(message: MessageType) {
-  if (!message?.parts) return false;
-  return message.parts.some(
-    (part: any) =>
-      part.type === "tool-invocation" &&
-      part.toolInvocation.toolName === "websiteGenerator" &&
-      part.toolInvocation.state !== "result"
-  );
+// Helper function to get loading text based on tool name
+function getLoadingText(toolName: string | undefined): string | null {
+  if (!toolName) return null;
+  switch (toolName) {
+    case "createWebsite": return "Creating your website...";
+    case "updateWebsite": return "Updating your website...";
+    case "getHtmlByVersion": return "Retrieving website version...";
+    default: return `Working with ${toolName}...`;
+  }
 }
 
 const Message = ({ message }: { message: MessageType }) => {
   const { role, content } = message;
-  const htmlContent = getHtmlArtifactFromMessage(message);
-  function stripContextBlock(text: string): string {
-    return text.replace(/\n?<context>[\s\S]*?<\/context>/g, "").trim();
-  }
-  const websiteLoading = role === "assistant" && isWebsiteToolLoading(message); 
+  const toolCallInfo = getToolCallInfo(message);
+  const isLoadingTool = toolCallInfo && toolCallInfo.state !== 'result';
+  const toolResult = toolCallInfo && toolCallInfo.state === 'result' ? toolCallInfo.result : null;
+
+  const loadingText = toolCallInfo ? getLoadingText(toolCallInfo.toolName) : null;
+
   return (
     <motion.div
       id={message.id}
@@ -64,19 +73,11 @@ const Message = ({ message }: { message: MessageType }) => {
       </div>
       <div className="flex flex-col gap-2 w-full">
         <div className="flex flex-col gap-3 prose prose-zinc dark:prose-invert prose-sm max-w-none">
-          {typeof content === "string" ? (
-            role === "user" ? (
-              <Markdown>{stripContextBlock(content)}</Markdown>
-            ) : (
-              <Markdown>{content.trim()}</Markdown>
-            )
-          ) : (
-            content
-          )}
+          {typeof content === "string" ? <Markdown>{content.trim()}</Markdown> : content}
         </div>
-        {websiteLoading && (
+        {isLoadingTool && loadingText && (
           <TextShimmer className="font-mono text-sm" duration={1.5}>
-            Generating website...
+            {loadingText}
           </TextShimmer>
         )}
         {message.experimental_attachments &&
@@ -126,11 +127,9 @@ const Message = ({ message }: { message: MessageType }) => {
                 )}
             </div>
           )}
-        {role === "assistant" && htmlContent && (
-          <div className="w-full max-w-[500px] mx-auto mt-2 flex justify-start">
-            <span className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full border border-blue-200 shadow-sm">
-              WEBSITE UPDATED!
-            </span>
+        {role === "assistant" && toolResult && toolResult.message && (
+          <div className="w-full max-w-[500px] mx-auto mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+            {toolResult.message}
           </div>
         )}
       </div>
@@ -185,12 +184,31 @@ export function Chat({
           {(() => {
             // Find the latest assistant message
             const latestAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+            const latestToolCallInfo = latestAssistantMsg ? getToolCallInfo(latestAssistantMsg) : null;
             const showStatus =
-              (latestAssistantMsg && isWebsiteToolLoading(latestAssistantMsg)) ||
+              (latestToolCallInfo && latestToolCallInfo.state !== 'result') ||
               status === "submitted" ||
               status === "streaming" ||
               status === "tooling";
+              
             if (!error && !showStatus) return null;
+            
+            let statusText = null;
+            if (latestToolCallInfo && latestToolCallInfo.state !== 'result') {
+              switch (latestToolCallInfo.toolName) {
+                case "createWebsite": statusText = "Creating website..."; break;
+                case "updateWebsite": statusText = "Updating website..."; break;
+                case "getHtmlByVersion": statusText = "Retrieving website version..."; break;
+                default: statusText = `Working with ${latestToolCallInfo.toolName}...`;
+              }
+            } else if (status === "tooling") {
+              statusText = "Working with tools...";
+            } else if (status === "streaming") {
+              statusText = "Generating message...";
+            } else if (status === "submitted") {
+              statusText = "Initializing message...";
+            }
+            
             return (
               <div className="flex flex-col gap-2 border-t border-l border-r border-b-0 border-zinc-200 rounded-t-md p-2 text-zinc-500 text-sm bg-zinc-50">
                 {error && (
@@ -208,20 +226,10 @@ export function Chat({
                     </button>
                   </div>
                 )}
-                {showStatus && (
+                {statusText && (
                   <div className="flex items-center gap-2">
                     <Loader className="w-4 h-4 animate-spin" />
-                    <span>
-                      {latestAssistantMsg && isWebsiteToolLoading(latestAssistantMsg)
-                        ? "Generating website..."
-                        : status === "tooling"
-                        ? "Working with tools..."
-                        : status === "streaming"
-                        ? "Generating message..."
-                        : status === "submitted"
-                        ? "Initializing message..."
-                        : null}
-                    </span>
+                    <span>{statusText}</span>
                   </div>
                 )}
               </div>

@@ -1,29 +1,14 @@
+import { getWebProject, updateWebProject } from "@/lib/query";
 import { openai } from "@ai-sdk/openai";
-import { Message } from "ai";
-import { streamText, appendResponseMessages } from "ai";
-import { websiteGenerator } from "./tools/website-generator";
-import {
-  getWebProject,
-  updateWebProject,
-  WebProject,
-} from "@/lib/query";
-import { deployHtmlToDomain } from '@/lib/domain';
+import { appendResponseMessages, Message as AiMessage, streamText } from "ai";
+import { tools } from "./tools";
 
-function extractHtml(message: Message): string | undefined {
-  if (message.parts) {
-    for (const part of message.parts) {
-      if (
-        part.type === "tool-invocation" &&
-        part.toolInvocation.toolName === "websiteGenerator" &&
-        part.toolInvocation.state === "result" &&
-        part.toolInvocation.result &&
-        typeof part.toolInvocation.result.htmlContent === "string"
-      ) {
-        return part.toolInvocation.result.htmlContent;
-      }
-    }
-  }
-  return undefined;
+// Extend the Message type to include meta information
+interface Message extends AiMessage {
+  meta?: {
+    projectId?: string;
+    [key: string]: any;
+  };
 }
 
 export async function POST(
@@ -33,88 +18,126 @@ export async function POST(
   try {
     const id = params.id;
     if (!id) {
-      return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing id" }), {
+        status: 400,
+      });
     }
     const requestBody = await req.json();
     const { messages }: { messages: Message[] } = requestBody;
     const project = getWebProject(id);
     if (!project) {
-      return new Response(JSON.stringify({ error: "WebProject not found" }), { status: 404 });
+      return new Response(JSON.stringify({ error: "WebProject not found" }), {
+        status: 404,
+      });
     }
+
+    // Get the current HTML content if available
+    let currentHtml = "";
+    if (
+      project.htmlVersions &&
+      project.htmlVersions.length > 0 &&
+      project.currentHtmlIndex !== null
+    ) {
+      currentHtml = project.htmlVersions[project.currentHtmlIndex].htmlContent;
+    }
+
+    // Format current HTML for the system prompt
+    const currentHtmlInfo = currentHtml
+      ? `\n\nCurrent website HTML is already deployed. You don't need to include this directly in your prompt to the websiteGenerator tool since it will be retrieved automatically based on the projectId.`
+      : `\n\nNo website has been created yet. The websiteGenerator tool will start with a blank template.`;
+
+    // Format assets for the system prompt
+    const assetsInfo =
+      project.assets && project.assets.length > 0
+        ? `\n\nAvailable assets:\n${project.assets
+            .map(
+              (asset) =>
+                `- ${asset.filename} (${asset.type}): ${asset.url} - ${asset.description}`
+            )
+            .join("\n")}`
+        : "\n\nNo assets are currently available for this project.";
+
+    // Mark messages with project ID for reference
+    const messagesWithProjectId = messages.map((msg) => ({
+      ...msg,
+      meta: { ...msg.meta, projectId: id },
+    }));
+
     const result = streamText({
       model: openai("gpt-4.1"),
-      system: `You are an expert website creation assistant that helps non-technical users build beautiful single-page websites. Follow these guidelines:
+      system: `# Website Creation Assistant
 
-1. Website Generation Process:
-   - Always use the 'websiteGenerator' tool for HTML creation/modification
-   - Never generate HTML directly
-   - Only create single-page HTML files - no backend code or multiple pages
+You are an expert website creation assistant that helps users build beautiful single-page websites. Your goal is to create static HTML websites that meet user requirements while providing a friendly and accessible experience.
 
-2. Communication Style:
-   - Use simple, non-technical language
-   - Avoid jargon and complex explanations
-   - Be clear, concise, and friendly
+## Project Information
+- Project ID: ${id}${currentHtmlInfo}
+- Domain: ${project.domain || "Not set yet"}
 
-3. User Interaction Protocol:
-   - Always clarify requirements before generating websites
-   - Confirm understanding of user requests
-   - Share your proposed changes before implementation
-   - After generation, provide a clear summary of changes made
+## Process Guidelines
 
-4. Technical Requirements:
-   - Always pass the latest HTML state to 'websiteGenerator' as 'currentHtml'
-   - Use null for new websites
-   - Maintain HTML state consistency across generations
+1. Requirements gathering
+   - Ask clarifying questions to understand user needs
+   - Gather relevant context or data points (if any) needed for the website
+   - Plan out changes before implementing them
+   - Let the user know what you're planning to do BEFORE generating any website changes
+   - Actively ask if they want to use any of the available assets in their website
 
-5. Change Management:
-   - Break complex requests into logical steps
-   - Validate each step with the user
-   - Document all changes clearly
-   - Never include raw HTML in explanations
+2. Website Generation and Updates
+   - For new websites: Use 'createWebsite' tool with "projectId", "instructions", optional "context", and optional "assetIds"
+   - For updating websites: Use 'updateWebsite' tool with "projectId", "updateInstructions", optional "context", optional "targetSection", optional "versionId", and optional "assetIds"
+   - Use the 'getHtmlByVersion' tool if the user wants to refer to or revert to a previous version
+   - Always explain your reasoning for changes before making them
+   - Preview what your changes will achieve before implementing
+   - Always use "projectId": "${id}" when calling any tool
+   - Tell the user when the generation is starting with a message like "I'm now creating/updating your website based on these requirements. This may take a moment..."
 
-6. Quality Assurance:
-   - Double-check user requirements
-   - Ensure generated websites meet expectations
-   - Provide creative, user-friendly explanations
-   - Maintain a professional yet approachable tone
+3. Asset Usage
+   - Proactively suggest using available assets in the website (especially images)
+   - Describe relevant assets to the user and ask if they'd like to include them
+   - To use project assets, include them in the "assetIds" parameter
+   - Example: "assetIds": ["asset-id-1", "asset-id-2"]
+   - When assets are available, ALWAYS ask the user if they'd like to use them before creating or updating the website
 
-Remember: Your goal is to create beautiful websites while making the process simple and understandable for non-technical users.`,
-      messages,
-      maxSteps: 5,
-      tools: {
-        websiteGenerator,
-      },
+4. User Communication
+   - Use clear, non-technical language for non-technical users
+   - Explain concepts in an accessible way
+   - Ask for feedback after making changes
+   - Let users know when operations might take time to complete
+
+
+IMPORTANT: Never include raw HTML in your explanations to users. Always inform the user before using any tools to generate HTML.
+
+${
+  project.assets && project.assets.length > 0
+    ? `AVAILABLE ASSETS: This project has ${
+        project.assets.length
+      } assets that can enhance the website. MAKE SURE to ask the user if they want to use any of these assets when building their website.\n\n${project.assets
+        .map(
+          (asset, index) =>
+            `${index + 1}. ${asset.filename} (${asset.type}): ID = "${
+              asset.id
+            }"\n   Description: ${asset.description}\n   URL: ${asset.url}`
+        )
+        .join("\n\n")}`
+    : "ASSETS: This project currently has no assets. You can suggest that the user upload images or other assets to enhance their website."
+}
+
+${assetsInfo}`,
+      messages: messagesWithProjectId,
+      maxSteps: 3,
+      tools: tools,
       onError: (error) => {
         console.error("Error during main streamText:", error);
       },
       async onFinish({ response }) {
         const updatedMessages = appendResponseMessages({
-          messages,
+          messages: messagesWithProjectId,
           responseMessages: response.messages,
-        });
-        // Only check the latest message for new HTML
-        const latestMessage = updatedMessages[updatedMessages.length - 1];
-        const htmlContent = extractHtml(latestMessage);
-        let htmlVersions = project.htmlVersions || [];
-        let currentHtmlIndex = project.currentHtmlIndex ?? null;
-        if (htmlContent) {
-          // Add new version
-          const newVersion = {
-            id: crypto.randomUUID(),
-            htmlContent,
-            createdAt: new Date().toISOString(),
-          };
-          htmlVersions = [...htmlVersions, newVersion];
-          currentHtmlIndex = htmlVersions.length - 1;
+        }) as Message[];
 
-          // Upload to S3 using shared deploy function
-          const domain = project.domain || `test-${project.id}.laman.ai`;
-          await deployHtmlToDomain(domain, htmlContent);
-        }
+        // Save the updated messages to the project
         updateWebProject(id, {
           messages: updatedMessages,
-          htmlVersions,
-          currentHtmlIndex,
         });
       },
     });
@@ -132,4 +155,4 @@ Remember: Your goal is to create beautiful websites while making the process sim
       );
     }
   }
-} 
+}

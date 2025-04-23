@@ -22,7 +22,7 @@ export type WebProject = {
   id: string;
   createdAt: string;
   messages: Message[];
-  domain: string | null;
+  domain: string;
   htmlVersions: HtmlVersion[];
   assets: Asset[];
   currentHtmlIndex: number | null;
@@ -97,6 +97,36 @@ export function updateWebProject(id: string, update: Partial<Omit<WebProject, 'i
   }
   store.set(id, updated);
   return updated;
+}
+
+/**
+ * Adds a new HTML version to a project and sets it as the current version
+ * @param projectId ID of the project to add the HTML version to
+ * @param htmlContent The HTML content to add
+ * @returns The ID of the newly created HTML version
+ */
+export async function addHtmlVersion(projectId: string, htmlContent: string): Promise<string> {
+  const project = store.get(projectId);
+  if (!project) throw new Error("Project not found");
+  
+  const newVersion: HtmlVersion = {
+    id: randomUUID(),
+    htmlContent,
+    createdAt: new Date().toISOString(),
+  };
+  
+  // Add new version to the array
+  const htmlVersions = [...(project.htmlVersions || []), newVersion];
+  const currentHtmlIndex = htmlVersions.length - 1;
+  
+  // Update the project
+  store.set(projectId, {
+    ...project,
+    htmlVersions,
+    currentHtmlIndex
+  });
+  
+  return newVersion.id;
 }
 
 export function deleteWebProject(id: string): boolean {
