@@ -2,7 +2,7 @@ import Input, { AttachmentPreview } from "@/components/input";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
 import { Message as MessageType } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { AlertTriangle, BotIcon, RotateCcw, UserIcon } from "lucide-react";
+import { AlertTriangle, BotIcon, Loader, RotateCcw, UserIcon } from "lucide-react";
 import Image from "next/image";
 import React from "react";
 import { Markdown } from "./markdown";
@@ -47,7 +47,7 @@ const Message = ({ message }: { message: MessageType }) => {
   function stripContextBlock(text: string): string {
     return text.replace(/\n?<context>[\s\S]*?<\/context>/g, "").trim();
   }
-  const websiteLoading = role === "assistant" && isWebsiteToolLoading(message);
+  const websiteLoading = role === "assistant" && isWebsiteToolLoading(message); 
   return (
     <motion.div
       id={message.id}
@@ -68,7 +68,7 @@ const Message = ({ message }: { message: MessageType }) => {
             role === "user" ? (
               <Markdown>{stripContextBlock(content)}</Markdown>
             ) : (
-              <Markdown>{content}</Markdown>
+              <Markdown>{content.trim()}</Markdown>
             )
           ) : (
             content
@@ -145,11 +145,6 @@ export function Chat({
   error,
   reload,
 }: ChatProps) {
-  if (messages.length > 2) {
-    console.log("messages");
-    console.log(messages[messages.length - 2].content);
-    console.log(messages[messages.length - 1].content);
-  }
   const [input, setInput] = React.useState("");
   const handleLocalSend = (
     value: string,
@@ -186,30 +181,73 @@ export function Chat({
         <div ref={endRef} />
       </div>
       <div className="px-4">
-        <Input
-          value={input}
-          onChange={setInput}
-          onSend={handleLocalSend}
-          loading={status === "streaming" || status === "submitted"}
-          disabled={status === "streaming" || status === "submitted"}
-        />
-        {error && (
-          <div className="w-full mx-auto mb-2 flex flex-col items-center">
-            <div className="w-full bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2 text-xs flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <span>Something went wrong. Please try again.</span>
+        <div className="w-full flex flex-col">
+          {(() => {
+            // Find the latest assistant message
+            const latestAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
+            const showStatus =
+              (latestAssistantMsg && isWebsiteToolLoading(latestAssistantMsg)) ||
+              status === "submitted" ||
+              status === "streaming" ||
+              status === "tooling";
+            if (!error && !showStatus) return null;
+            return (
+              <div className="flex flex-col gap-2 border-t border-l border-r border-b-0 border-zinc-200 rounded-t-md p-2 text-zinc-500 text-sm bg-zinc-50">
+                {error && (
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                      <span className="text-red-700">Something went wrong. Please try again.</span>
+                    </div>
+                    <button
+                      className="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-zinc-200 bg-white dark:bg-zinc-900"
+                      onClick={() => reload()}
+                      title="Retry"
+                    >
+                      <RotateCcw className="w-4 h-4" /> Retry
+                    </button>
+                  </div>
+                )}
+                {showStatus && (
+                  <div className="flex items-center gap-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>
+                      {latestAssistantMsg && isWebsiteToolLoading(latestAssistantMsg)
+                        ? "Generating website..."
+                        : status === "tooling"
+                        ? "Working with tools..."
+                        : status === "streaming"
+                        ? "Generating message..."
+                        : status === "submitted"
+                        ? "Initializing message..."
+                        : null}
+                    </span>
+                  </div>
+                )}
               </div>
-              <button
-                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-zinc-200 bg-white dark:bg-zinc-900"
-                onClick={() => reload()}
-                title="Retry"
-              >
-                <RotateCcw className="w-4 h-4" /> Retry
-              </button>
-            </div>
-          </div>
-        )}
+            );
+          })()}
+          <Input
+            value={input}
+            onChange={setInput}
+            onSend={handleLocalSend}
+            loading={
+              status === "streaming" ||
+              status === "submitted" ||
+              status === "tooling"
+            }
+            disabled={
+              status === "streaming" ||
+              status === "submitted" ||
+              status === "tooling"
+            }
+            className={
+              (status === "submitted" || status === "streaming" || status === "tooling")
+                ? "rounded-t-none"
+                : ""
+            }
+          />
+        </div>
       </div>
     </div>
   );

@@ -143,7 +143,7 @@ export default function Input({
 
   return (
     <div
-      className={`w-full bg-white border border-zinc-200 rounded-lg p-2 flex flex-col gap-1 shadow-sm relative ${
+      className={`w-full bg-white border border-zinc-200 rounded-md p-2 flex flex-col gap-1 shadow-sm relative ${
         dragActive ? "ring-2 ring-blue-400" : ""
       } ${className}`}
     >

@@ -42,7 +42,7 @@ export async function POST(
       return new Response(JSON.stringify({ error: "WebProject not found" }), { status: 404 });
     }
     const result = streamText({
-      model: openai("gpt-4.1-mini"),
+      model: openai("gpt-4.1"),
       system: `You are an expert website creation assistant that helps non-technical users build beautiful single-page websites. Follow these guidelines:
 
 1. Website Generation Process:
