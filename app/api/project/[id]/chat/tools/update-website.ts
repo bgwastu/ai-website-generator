@@ -390,6 +390,27 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
   - Reference color palette: https://tailwindcss.com/docs/colors
   - Customize colors based on the design aesthetic, not fixed to blue
 
+- Placeholder Images:
+  - ALWAYS use fakeimg.pl with specific dimensions
+  - Example: \`<img src="https://fakeimg.pl/600x400" alt="Placeholder image" class="w-full h-auto rounded-lg">\`
+  - Adjust dimensions based on usage context: hero (1200x600), card (400x300), avatar (150x150), etc.
+  - Include descriptive alt text for accessibility
+  - Apply appropriate Tailwind classes for responsive behavior
+  - Examples:
+    \`\`\`html
+    <!-- Hero image -->
+    <img src="https://fakeimg.pl/1200x600" alt="Hero image" class="w-full h-auto rounded-lg">
+    
+    <!-- Card image -->
+    <img src="https://fakeimg.pl/400x300" alt="Card image" class="w-full h-auto rounded-lg">
+    
+    <!-- Avatar/profile image -->
+    <img src="https://fakeimg.pl/150x150" alt="Profile avatar" class="w-16 h-16 rounded-full">
+    
+    <!-- Gallery thumbnail -->
+    <img src="https://fakeimg.pl/300x200" alt="Gallery item" class="w-full h-auto rounded hover:opacity-90 transition-opacity">
+    \`\`\`
+
 - Vanilla JavaScript:
   - Use modern JavaScript (ES6+) features for DOM manipulation
   - For dynamic content, use:
