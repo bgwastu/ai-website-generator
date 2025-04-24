@@ -167,12 +167,11 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
               <Button
                 onClick={() => onDeploy(htmlContent, currentVersionIndex)}
                 disabled={isUploading}
-                variant="outline"
                 size="sm"
                 className="h-7 text-xs px-2 flex items-center gap-1"
               >
                 <UploadIcon size={14} />
-                <span>{isUploading ? "Deploying..." : "Deploy"}</span>
+                <span>{isUploading ? "Deploying..." : "Use this version"}</span>
               </Button>
             ) : null}
           </div>

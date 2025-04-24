@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { UploadIcon, Trash2Icon, ImageIcon, AlertCircle, CheckCircle2, ExternalLinkIcon, Loader, FileIcon } from "lucide-react";
@@ -26,8 +26,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{url: string, filename: string} | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Reset image loaded state when selected image changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [selectedImage?.url]);
 
   // Sort assets by uploadedAt (newest first)
   const sortedAssets = [...assets].sort((a, b) => {
@@ -172,7 +178,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
 
         {/* Content area with upload overlay when needed */}
         <div 
-          className="flex-1 overflow-hidden relative"
+          className="flex-1 overflow-auto relative"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -189,44 +195,46 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
 
           {sortedAssets.length === 0 ? (
             // Empty state
-            <div className="flex flex-col items-center justify-center h-full p-8 border-2 border-dashed border-zinc-200 m-4 rounded-lg transition-colors">
-              <div className="bg-zinc-100 p-4 rounded-full mb-4">
-                <ImageIcon size={32} className="text-zinc-400" />
+            <div className="p-4 h-full">
+              <div className="flex flex-col items-center justify-center h-full p-6 border-2 border-dashed border-zinc-200 rounded-lg transition-colors">
+                <div className="bg-zinc-100 p-4 rounded-full mb-4">
+                  <ImageIcon size={32} className="text-zinc-400" />
+                </div>
+                <h3 className="text-zinc-800 font-medium mb-2">No images uploaded yet</h3>
+                <p className="text-zinc-500 text-center text-sm mb-4 max-w-md">
+                  Upload images to use in your website. Drag and drop an image here or click the upload button.
+                </p>
+                <label className={cn("cursor-pointer", isUploadingFile && "cursor-not-allowed")}>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleUploadFile}
+                    disabled={isUploadingFile}
+                    accept="image/*"
+                  />
+                  <span className={cn(
+                    "inline-flex items-center gap-2 bg-zinc-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                    isUploadingFile ? "opacity-50" : "hover:bg-zinc-700"
+                  )}>
+                    {isUploadingFile ? (
+                      <>
+                        <Loader size={16} className="animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadIcon size={16} />
+                        <span>Select Image</span>
+                      </>
+                    )}
+                  </span>
+                </label>
               </div>
-              <h3 className="text-zinc-800 font-medium mb-2">No images uploaded yet</h3>
-              <p className="text-zinc-500 text-center text-sm mb-4 max-w-md">
-                Upload images to use in your website. Drag and drop an image here or click the upload button.
-              </p>
-              <label className={cn("cursor-pointer", isUploadingFile && "cursor-not-allowed")}>
-                <input
-                  type="file"
-                  className="hidden"
-                  onChange={handleUploadFile}
-                  disabled={isUploadingFile}
-                  accept="image/*"
-                />
-                <span className={cn(
-                  "inline-flex items-center gap-2 bg-zinc-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                  isUploadingFile ? "opacity-50" : "hover:bg-zinc-700"
-                )}>
-                  {isUploadingFile ? (
-                    <>
-                      <Loader size={16} className="animate-spin" />
-                      <span>Uploading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <UploadIcon size={16} />
-                      <span>Select Image</span>
-                    </>
-                  )}
-                </span>
-              </label>
             </div>
           ) : (
             // File list
             <div className={cn(
-              "p-2 overflow-y-auto h-full",
+              "p-2 h-full",
               isUploadingFile && "opacity-70 pointer-events-none"
             )}>
               <div className="border rounded-md divide-y divide-zinc-100">
@@ -270,7 +278,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
                       </div>
                       
                       {/* Action buttons */}
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                         <button
                           className={cn(
                             "p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded",
@@ -296,20 +304,37 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
       </div>
 
       {/* Image preview dialog */}
-      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+      <Dialog open={!!selectedImage} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedImage(null);
+          setImageLoaded(false);
+        }
+      }}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="pr-10">{selectedImage?.filename}</DialogTitle>
+            <DialogTitle className="pr-10 text-sm">{selectedImage?.filename}</DialogTitle>
           </DialogHeader>
           {selectedImage && (
             <div className="relative w-full aspect-auto max-h-[70vh] overflow-hidden rounded-md border border-zinc-200">
-              <Image
-                src={selectedImage.url}
-                alt={selectedImage.filename}
-                className="object-contain w-full h-full"
-                width={800}
-                height={600}
-              />
+              {/* Show loader until image is loaded */}
+              {!imageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-50">
+                  <Loader size={24} className="animate-spin text-zinc-500" />
+                </div>
+              )}
+              
+              {/* The actual image */}
+              <div className={cn(!imageLoaded && "opacity-0")}>
+                <Image
+                  src={selectedImage.url}
+                  alt={selectedImage.filename}
+                  className="object-contain w-full h-full"
+                  width={800}
+                  height={600}
+                  onLoad={() => setImageLoaded(true)}
+                  priority
+                />
+              </div>
             </div>
           )}
         </DialogContent>

@@ -216,12 +216,11 @@ export default function Home() {
       {/* Floating toggle button for mobile */}
       {!showPreviewPane && (
         <button
-          className="fixed z-40 top-4 right-4 lg:hidden bg-white text-blue-700 border border-blue-700 rounded-md px-2.5 py-1 flex items-center gap-1 shadow-sm focus:outline-none text-xs font-medium"
+          className="fixed z-40 top-6 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md pl-2 pr-2 py-2 flex items-center"
           onClick={() => setShowPreviewPane(true)}
           aria-label="Show Preview Pane"
         >
-          <ChevronLeft size={16} />
-          <span>Preview</span>
+          <ChevronLeft size={18} className="mr-1 transform transition-transform group-hover:-translate-x-1" />
         </button>
       )}
 
@@ -232,9 +231,9 @@ export default function Home() {
             className="absolute inset-0 bg-black/40" 
             onClick={() => setShowPreviewPane(false)} 
           />
-          <div className="relative ml-auto w-full max-w-md h-full bg-white shadow-xl flex flex-col">
+          <div className="relative ml-auto w-full max-w-md h-full bg-white flex flex-col">
             {/* Compact mobile header */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-zinc-100">
+            <div className="flex items-center gap-2 px-3 py-2">
               <GlobeIcon size={16} className="text-blue-500" />
               <span className="text-xs font-medium text-zinc-700">Website Preview</span>
               <button
@@ -247,6 +246,7 @@ export default function Home() {
             </div>
             <div className="flex-1 overflow-y-auto">
               <PreviewPane
+              className="m-0 rounded-none"
                 htmlVersions={htmlVersions.map(
                   (v: { htmlContent: string }) => v.htmlContent
                 )}
