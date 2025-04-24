@@ -235,7 +235,7 @@ Please integrate the new section content into the current HTML, replacing the ex
           system: stitchSystemPrompt,
           prompt: stitchUserPrompt,
         });
-        
+
         // Process the result to remove any markdown formatting if present
         let processedHtml = stitchResult.text;
         // Remove triple backticks if the AI accidentally includes them
@@ -519,11 +519,11 @@ Please update the website (HTML structure and JavaScript code) according to thes
       const htmlId = await addHtmlVersion(projectId, updatedHtml);
 
       // Deploy the HTML to a domain
-      const deployedUrl = await deployHtmlToDomain(
+      await deployHtmlToDomain(
         project.domain,
         updatedHtml
       );
-      console.log(`Deployed updated website to: ${deployedUrl}`);
+      console.log(`Deployed updated website successfully`);
 
       return {
         success: true,
@@ -531,8 +531,7 @@ Please update the website (HTML structure and JavaScript code) according to thes
           ? `Website section '${targetSection}' updated successfully!`
           : "Website updated successfully!",
         htmlVersionId: htmlId,
-        usedAssetIds: assetIds,
-        deployedUrl: deployedUrl
+        usedAssetIds: assetIds
       };
     } catch (error) {
       return {

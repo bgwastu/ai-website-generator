@@ -61,5 +61,5 @@ export async function deleteDomain(domain: string): Promise<boolean> {
 export async function deployHtmlToDomain(domain: string, html: string): Promise<string> {
   const key = `website-generator/${domain}/index.html`;
   await putObject(key, html, 'text/html');
-  return `${domain}/${key}`;
+  return domain;
 } 

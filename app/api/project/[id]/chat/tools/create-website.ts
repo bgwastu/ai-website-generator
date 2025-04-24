@@ -120,13 +120,13 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
         </tr>
       </tbody>
     </table>
-  </div>
+        </div>
   \`\`\`
 
 - For larger datasets or interactive tables, use Grid.js:
   \`\`\`html
   <div id="table-container"></div>
-  <script>
+    <script>
     new gridjs.Grid({
       columns: ['Name', 'Title', 'Email'],
       data: [
@@ -166,7 +166,7 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
         rows[i].style.display = matchFound ? '' : 'none';
       }
     });
-  </script>
+     </script>
   \`\`\`
 
 - Always use <th scope="col"> for table headers and include appropriate accessibility attributes
@@ -324,18 +324,17 @@ Please generate a complete, beautiful, accessible, and functional single-page we
       const htmlId = await addHtmlVersion(projectId, htmlContent);
 
       // Deploy the HTML to a domain
-      const deployedUrl = await deployHtmlToDomain(
+      await deployHtmlToDomain(
         project.domain, 
         htmlContent
       );
-      console.log(`Deployed website to: ${deployedUrl}`);
+      console.log(`Deployed website successfully`);
 
       return {
         success: true,
         message: "Website created successfully!",
         htmlVersionId: htmlId,
-        usedAssetIds: assetIds,
-        deployedUrl: deployedUrl
+        usedAssetIds: assetIds
       };
     } catch (error) {
       return {
