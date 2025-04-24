@@ -91,6 +91,7 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
   - Use consistent typography: h1 (text-3xl/4xl font-bold), h2 (text-2xl font-semibold), body (text-base text-gray-700)
   - Common components: buttons (px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md), 
     cards (bg-white rounded-lg shadow-sm p-6 border border-gray-100)
+- IMPORTANT: For styled text in tables (like colored percentages), apply Tailwind classes directly to table cells (<td>) instead of using nested span elements  
 - Add smooth animations using CSS transitions:
   - Use transition classes for hover effects and interactive elements
   - Keep animations subtle and purposeful
@@ -123,6 +124,21 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
         </div>
   \`\`\`
 
+- For percentage values in tables, apply styling directly rather than using raw HTML span tags:
+  \`\`\`html
+  <!-- DO NOT use: <span class="text-red-600 font-medium">5%</span> -->
+  
+  <!-- INSTEAD use Tailwind classes directly on the table cell: -->
+  <td class="px-6 py-4 whitespace-nowrap text-red-600 font-medium">5%</td>
+  
+  <!-- For dynamic values in JavaScript-populated tables: -->
+  <script>
+    // Apply classes to the cell directly
+    row.insertCell(0).className = "px-6 py-4 whitespace-nowrap text-red-600 font-medium";
+    row.cells[0].textContent = "5%";
+  </script>
+  \`\`\`
+
 - For larger datasets or interactive tables, use Grid.js:
   \`\`\`html
   <div id="table-container"></div>
@@ -138,6 +154,32 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
         limit: 10
       },
       sort: true
+    }).render(document.getElementById('table-container'));
+  </script>
+  \`\`\`
+
+- For Grid.js tables with colored text or percentages, use the formatter option:
+  \`\`\`html
+  <script>
+    new gridjs.Grid({
+      columns: [
+        'Metric',
+        { 
+          name: 'Percent Loss',
+          formatter: (cell) => {
+            // Create a div element with the appropriate classes
+            return gridjs.h('div', {
+              className: cell > 20 ? 'text-red-600 font-medium' : 'text-orange-500',
+              style: { whiteSpace: 'nowrap' }
+            }, cell + '%');
+          }
+        }
+      ],
+      data: [
+        ['Revenue', 5],
+        ['Profit', 10],
+        ['Growth', 15]
+      ]
     }).render(document.getElementById('table-container'));
   </script>
   \`\`\`

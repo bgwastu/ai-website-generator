@@ -130,6 +130,7 @@ Update a specific section of a website built with HTML, Tailwind CSS, and vanill
 - Generate ONLY the HTML for the requested '${targetSection}' section
 - Use Tailwind CSS exclusively for styling
 - Use vanilla JavaScript for interactivity - NO frameworks like Vue or React
+- IMPORTANT: For styled text in tables (like colored percentages), apply Tailwind classes directly to table cells (<td>) instead of using nested span elements
 - Add smooth transitions using CSS transition classes where appropriate
 - Begin output with <!-- ${targetSection} begin --> and end with <!-- ${targetSection} end -->
 - Do not include <script> tags unless absolutely necessary for the section
@@ -258,6 +259,7 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
   - Font Awesome: \`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\`
   - Grid.js (for tables): \`<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>\` and \`<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">\`
   - ApexCharts: \`<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>\`
+- IMPORTANT: For styled text in tables (like colored percentages), apply Tailwind classes directly to table cells (<td>) instead of using nested span elements
 - Modify the JavaScript code to support new features
 - Ensure all animations are smooth using CSS transitions
 - Preserve existing content unless explicitly instructed to change it
@@ -287,6 +289,21 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
   </div>
   \`\`\`
 
+- For percentage values or colored text in tables, apply styling directly to the table cells:
+  \`\`\`html
+  <!-- DO NOT use: <span class="text-red-600 font-medium">5%</span> -->
+  
+  <!-- INSTEAD use Tailwind classes directly on the table cell: -->
+  <td class="px-6 py-4 whitespace-nowrap text-red-600 font-medium">5%</td>
+  
+  <!-- For dynamic values in JavaScript-populated tables: -->
+  <script>
+    // Apply classes to the cell directly
+    row.insertCell(0).className = "px-6 py-4 whitespace-nowrap text-red-600 font-medium";
+    row.cells[0].textContent = "5%";
+  </script>
+  \`\`\`
+
 - For larger datasets or interactive tables, use Grid.js:
   \`\`\`html
   <div id="table-container"></div>
@@ -302,6 +319,32 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
         limit: 10
       },
       sort: true
+    }).render(document.getElementById('table-container'));
+  </script>
+  \`\`\`
+
+- For Grid.js tables with colored text or percentages, use the formatter option:
+  \`\`\`html
+  <script>
+    new gridjs.Grid({
+      columns: [
+        'Metric',
+        { 
+          name: 'Percent Loss',
+          formatter: (cell) => {
+            // Create a div element with the appropriate classes
+            return gridjs.h('div', {
+              className: cell > 20 ? 'text-red-600 font-medium' : 'text-orange-500',
+              style: { whiteSpace: 'nowrap' }
+            }, cell + '%');
+          }
+        }
+      ],
+      data: [
+        ['Revenue', 5],
+        ['Profit', 10],
+        ['Growth', 15]
+      ]
     }).render(document.getElementById('table-container'));
   </script>
   \`\`\`
