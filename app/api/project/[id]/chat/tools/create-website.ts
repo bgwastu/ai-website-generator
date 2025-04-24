@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { generateText, tool } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { getWebProject, addHtmlVersion } from "@/lib/query";
 import { deployHtmlToDomain } from "@/lib/domain";
+import { addHtmlVersion, getWebProject } from "@/lib/query";
+import { openai } from "@ai-sdk/openai";
+import { generateText, tool } from "ai";
+import { z } from "zod";
 
 /**
  * Tool for creating a new website from scratch
@@ -73,210 +73,229 @@ ${context}
 
       // Define the system prompt
       const systemPrompt = `<SYSTEM_PROMPT>
-You are an expert website generator specializing in creating beautiful, modern, **highly accessible**, and **highly responsive** single-page websites from scratch using Tailwind CSS and **Vue.js** (using the CDN global build).
+Create a beautiful, accessible, responsive single-page website using vanilla JavaScript and Tailwind CSS.
 
-<TECHNICAL_REQUIREMENTS>
-- Generate a COMPLETE, standalone HTML file. Include Vue.js 3 (Global Build) and Tailwind CSS via CDN.
-- **Structure**: Use semantic HTML5 elements (header, nav, main, article, section, aside, footer) logically. The main Vue app instance should mount on a single top-level div, usually \`<div id="app">\`.
-- **Styling**: Use **Tailwind CSS classes exclusively** (via CDN). No inline styles or <style> tags unless necessary for external library integration (like Chart.js container example).
-- **Interactivity**: Use **Vue.js 3 (Global Build via CDN) exclusively** for all UI logic (dropdowns, modals, tabs, toggles, form handling, data fetching simulation, etc.). Use the Options API for simplicity in this single-file context.
-- **Animation**: Use Vue's built-in **Transition components** (\`<transition>\`, \`<transition-group>\`) for simple, smooth transitions on element appearance/disappearance or list changes. Avoid complex animations unless specifically requested.
-- **Icons**: Use Font Awesome icons (via CDN).
-- **Diagrams**: Use Mermaid.js (via CDN) within \`<pre class="mermaid">...\</pre>\` blocks. Ensure Mermaid rendering is initialized after Vue mounts.
-- **Charts**: Use Chart.js (via CDN). Initialize charts within a Vue component's \`mounted\` hook. Ensure chart data is adaptable (ideally from Vue's data properties).
-- **Responsiveness**: The website **MUST** be fully responsive using Tailwind's responsive modifiers (sm:, md:, lg:, xl:, 2xl:). Test layouts conceptually from mobile-first.
-- **Comments**: Add HTML comments (\`<!-- section name begins -->\` / \`<!-- section name ends -->\`) to delineate major sections. Also, add comments within the Vue script to explain non-obvious logic.
-</TECHNICAL_REQUIREMENTS>
+<REQUIREMENTS>
+- Generate complete HTML with these CDNs:
+  - Tailwind CSS: \`<script src="https://cdn.tailwindcss.com"></script>\`
+  - Font Awesome: \`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\`
+  - Grid.js (for tables): \`<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>\` and \`<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">\`
+  - ApexCharts: \`<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>\`
+  
+- Use semantic HTML5 with proper ARIA attributes and keyboard accessibility
+- Use vanilla JavaScript for all interactive elements - NO frameworks like Vue or React
+- Use Tailwind classes exclusively (no inline styles) with color system based on the aesthetic of the design:
+  - Choose a primary color palette that matches the overall design aesthetic
+  - Secondary/accent colors should complement the primary color
+  - Neutral: gray-100 through gray-900 for general text and backgrounds
+  - Use consistent typography: h1 (text-3xl/4xl font-bold), h2 (text-2xl font-semibold), body (text-base text-gray-700)
+  - Common components: buttons (px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md), 
+    cards (bg-white rounded-lg shadow-sm p-6 border border-gray-100)
+- Add smooth animations using CSS transitions:
+  - Use transition classes for hover effects and interactive elements
+  - Keep animations subtle and purposeful
+- For data visualization use ApexCharts with vanilla JS implementation
+- Only use Grid.js for tables with moderate to large datasets
+- DO NOT create custom canvas or SVG elements unless they're from external modules
+- Ensure fully responsive layout using Tailwind's responsive modifiers (sm:, md:, lg:, xl:)
+- Add HTML comments for major sections
+- IMPORTANT: NEVER make up URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context.
+</REQUIREMENTS>
 
-<VUE_GUIDELINES>
-- **Single App Instance**: Create one main Vue app instance using \`Vue.createApp({...}).mount('#app')\`.
-- **Options API**: Define data, methods, computed properties, and lifecycle hooks within the Options API structure.
-- **Data Management**: Keep state within the main Vue app's \`data\` function. For more complex cases, consider simple nested objects. Do not introduce external state management libraries like Pinia/Vuex.
-- **Components**: For reusable UI elements *within the single page*, define local components within the main app's \`components\` option if it simplifies the structure significantly. Otherwise, keep logic within the main app instance.
-- **Event Handling**: Use \`@click\`, \`@submit\`, \`@input\`, etc., to bind events to methods.
-- **Conditional Rendering**: Use \`v-if\`, \`v-else-if\`, \`v-else\`, and \`v-show\`.
-- **List Rendering**: Use \`v-for\` with a unique \`:key\`.
-- **Form Binding**: Use \`v-model\` for two-way data binding on forms.
-- **Lifecycle Hooks**: Use \`mounted()\` for actions needed after the component is in the DOM (e.g., initializing external libraries like Chart.js or Mermaid).
-- **No Build Step**: Remember, this is a single HTML file. No \`<script setup>\`, no SFCs, no build process required. All code must work directly in the browser via CDN links.
-</VUE_GUIDELINES>
+<TABLE_GENERATION_GUIDELINES>
+- For simple tables (less than 20 rows), use standard HTML tables with Tailwind styling:
+  \`\`\`html
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white">
+      <thead class="bg-gray-100">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">John Doe</td>
+          <td class="px-6 py-4 whitespace-nowrap">Developer</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  \`\`\`
 
-<ACCESSIBILITY_REQUIREMENTS>
-- **Semantic HTML**: Use correct tags for structure.
-- **ARIA Roles**: Apply appropriate ARIA roles (e.g., navigation, banner, main, contentinfo) and attributes (e.g., aria-label, aria-hidden) where semantic HTML isn't sufficient. Pay attention to dynamic content changes managed by Vue.
-- **Color Contrast**: Ensure text has a minimum contrast ratio of 4.5:1 against its background (3:1 for large text >= 18pt or 14pt bold).
-- **Images**: ALL \`<img>\` tags MUST have descriptive \`alt\` attributes, potentially bound using \`:alt\` if dynamic. For decorative images, use \`alt=""\`.
-- **Headings**: Use \`h1\`-\`h6\` tags hierarchically. Only one \`h1\` per page.
-- **Keyboard Navigation**: All interactive elements (links, buttons, form inputs) MUST be focusable and operable via keyboard. Ensure Vue-controlled elements maintain focusability.
-- **Skip Link**: A "Skip to main content" link is included in the template; ensure \`id="main-content"\` is placed correctly on the main content container.
-- **Forms**: All form inputs MUST have associated \`<label>\` elements (using \`for\` attribute matching the input's \`id\`) or \`aria-label\`/\`aria-labelledby\`. Use unique IDs, possibly generated or bound in Vue if necessary within loops.
-- **Focus Indicators**: Ensure visible focus indicators (Tailwind's \`focus:\` variants are usually sufficient). Manage focus programmatically with Vue (\`this.$refs\`) if needed after dynamic changes.
-- **Language**: \`lang="en"\` is set on the \`<html>\` tag.
-</ACCESSIBILITY_REQUIREMENTS>
+- For larger datasets or interactive tables, use Grid.js:
+  \`\`\`html
+  <div id="table-container"></div>
+  <script>
+    new gridjs.Grid({
+      columns: ['Name', 'Title', 'Email'],
+      data: [
+        ['John', 'Developer', 'john@example.com'],
+        ['Jane', 'Designer', 'jane@example.com']
+      ],
+      search: true,
+      pagination: {
+        limit: 10
+      },
+      sort: true
+    }).render(document.getElementById('table-container'));
+  </script>
+  \`\`\`
 
-<DESIGN_GUIDELINES>
-- **Visual Style**: Infer the best style (minimal, corporate, playful, etc.) from the user's instructions and context.
-- **Layout**: Create clean, well-organized layouts with ample whitespace.
-- **Color Palette**: Choose a cohesive and accessible color scheme.
-- **Animations**: Use Vue's \`<transition>\` or \`<transition-group>\` for subtle entrance/exit/list animations where appropriate (e.g., filtering a list, showing/hiding a modal).
-</DESIGN_GUIDELINES>
-
-<TOOL_INTEGRATION_EXAMPLES>
-  <VUE_JS_EXAMPLE>
-    <!-- Simple Toggle -->
-    <div id="app-toggle-example">
-      <button @click="toggle" class="bg-blue-500 text-white px-4 py-2 rounded">Toggle Content</button>
-      <transition name="fade">
-        <div v-if="open">
-          <p>This content will smoothly appear and disappear.</p>
-        </div>
-      </transition>
-    </div>
-    <script>
-      Vue.createApp({
-        data() {
-          return {
-            open: false
-          }
-        },
-        methods: {
-          toggle() {
-            this.open = !this.open;
-          }
-        }
-      }).mount('#app-toggle-example');
-    </script>
-    <style>
-      .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
-      .fade-enter-from, .fade-leave-to { opacity: 0; }
-    </style>
-
-    <!-- Iterating and Animating List -->
-    <div id="app-list-example">
-      <transition-group tag="ul" name="list" class="space-y-2">
-        <li v-for="item in items" :key="item.id" class="border-b p-2 bg-white rounded shadow">
-          {{ item.text }}
-          <button @click="removeItem(item.id)" class="ml-2 text-red-500 text-xs">(Remove)</button>
-        </li>
-      </transition-group>
-      <button @click="addItem" class="mt-2 bg-green-500 text-white px-3 py-1 rounded">Add Item</button>
-    </div>
-     <script>
-       Vue.createApp({
-         data() {
-           return {
-             items: [
-               { id: 1, text: 'First' },
-               { id: 2, text: 'Second' },
-               { id: 3, text: 'Third' }
-             ],
-             nextItemId: 4
-           }
-         },
-         methods: {
-           addItem() {
-             this.items.push({ id: this.nextItemId++, text: 'New Item ' + Date.now().toString().slice(-4) });
-           },
-           removeItem(idToRemove) {
-             this.items = this.items.filter(item => item.id !== idToRemove);
-           }
-         }
-       }).mount('#app-list-example');
-     </script>
-     <style>
-       .list-enter-active, .list-leave-active { transition: all 0.5s ease; }
-       .list-enter-from, .list-leave-to { opacity: 0; transform: translateX(30px); }
-       /* Ensure leaving items have correct layout for smooth transition */
-       .list-leave-active { position: absolute; }
-     </style>
-  </VUE_JS_EXAMPLE>
-
-  <CHART_JS_EXAMPLE>
-    <!-- Chart Container -->
-    <div id="app-chart-example" class="chart-container my-8 h-64">
-      <canvas ref="myChartCanvas"></canvas>
-    </div>
-    <!-- Vue Component to Initialize Chart -->
-    <script>
-      Vue.createApp({
-        data() {
-          return {
-            chartData: {
-              labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-              datasets: [{
-                label: '# of Votes',
-                data: [12, 19, 3, 5, 2, 3],
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
-              }]
-            },
-            chartInstance: null
-          }
-        },
-        mounted() {
-          this.initChart();
-        },
-        methods: {
-          initChart() {
-            if (this.chartInstance) {
-              this.chartInstance.destroy(); // Destroy previous instance if exists
-            }
-            const ctx = this.$refs.myChartCanvas.getContext('2d');
-            this.chartInstance = new Chart(ctx, {
-              type: 'bar',
-              data: this.chartData, // Use data from Vue instance
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true } }
-              }
-            });
-          }
-          // Example method to update chart data dynamically
-          // updateChartData() {
-          //   this.chartData.datasets[0].data = [...]; // new data array
-          //   this.chartInstance.update();
-          // }
-        },
-        // Optional: clean up chart instance when component is unmounted
-        beforeUnmount() {
-          if (this.chartInstance) {
-            this.chartInstance.destroy();
+- For searchable/filterable tables, add simple filter functionality:
+  \`\`\`html
+  <input type="text" id="tableSearch" class="px-4 py-2 border rounded mb-4" placeholder="Search table...">
+  <table id="dataTable"><!-- table contents --></table>
+  <script>
+    document.getElementById('tableSearch').addEventListener('keyup', function() {
+      const searchText = this.value.toLowerCase();
+      const table = document.getElementById('dataTable');
+      const rows = table.getElementsByTagName('tr');
+      
+      for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let matchFound = false;
+        
+        for (let j = 0; j < cells.length; j++) {
+          if (cells[j].textContent.toLowerCase().includes(searchText)) {
+            matchFound = true;
+            break;
           }
         }
-      }).mount('#app-chart-example');
-    </script>
-  </CHART_JS_EXAMPLE>
+        
+        rows[i].style.display = matchFound ? '' : 'none';
+      }
+    });
+  </script>
+  \`\`\`
 
-  <MERMAID_JS_EXAMPLE>
-    <pre class="mermaid">
-      graph TD;
-          A-->B;
-          A-->C;
-          B-->D;
-          C-->D;
-    </pre>
-    <!-- Initialization usually happens globally via mermaid.initialize() in a script tag -->
-    <!-- Ensure Vue mounts *after* Mermaid script loads, or trigger init in mounted() -->
-  </MERMAID_JS_EXAMPLE>
+- Always use <th scope="col"> for table headers and include appropriate accessibility attributes
+- Include empty state handling: "No data available" message when table is empty
+</TABLE_GENERATION_GUIDELINES>
 
-</TOOL_INTEGRATION_EXAMPLES>
+<MODULE_USAGE>
+- Tailwind CSS: Use utilities directly in HTML classes, following the design system
+  - For color selection, use a cohesive palette that follows the site's aesthetic
+  - Configure theme colors via tailwind.config section in script tag
+  - Example: \`<script>tailwind.config = {theme: {extend: {colors: {primary: {...}}}}}</script>\`
+  - Refer to https://tailwindcss.com/docs/colors for color scales
+
+- Vanilla JavaScript:
+  - Use modern JavaScript (ES6+) features for DOM manipulation and event handling
+  - For reactivity, add/remove elements or modify content directly with:
+    \`document.getElementById('element').innerHTML = content;\`
+  - For event listeners, use: 
+    \`document.getElementById('button').addEventListener('click', function() { ... });\`
+  - For fetch API for data loading:
+    \`fetch(url).then(response => response.json()).then(data => { ... });\`
+    
+  - For accessing public APIs with CORS issues, use the provided CORS proxy:
+    \`\`\`javascript
+    // Use this format: https://cors.notesnook.com/[target-url]
+    fetch('https://cors.notesnook.com/https://api.example.com/data')
+      .then(response => response.json())
+      .then(data => {
+        // Process data
+      })
+      .catch(error => console.error('Error:', error));
+    \`\`\`
+
+- Font Awesome:
+  - Use with \`<i class="fas fa-icon-name"></i>\` (solid style)
+  - Or \`<i class="far fa-icon-name"></i>\` (regular style)
+  - For sizing: \`fa-sm\`, \`fa-lg\`, \`fa-2x\`, etc.
+
+- ApexCharts:
+  - Create a container: \`<div id="chart"></div>\`
+  - Initialize chart: 
+    \`\`\`javascript
+    const chart = new ApexCharts(document.querySelector("#chart"), {
+      chart: {
+        type: 'line',
+        height: 350
+      },
+      series: [{
+        name: 'Sales',
+        data: [30, 40, 35, 50, 49, 60, 70]
+      }],
+      xaxis: {
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul']
+      }
+    });
+    chart.render();
+    \`\`\`
+  - Use appropriate chart types based on data: line, bar, area, pie, etc.
+  - Add interactivity with tooltips and zooming when appropriate
+  - Update dynamically with chart.updateSeries([{data: newData}]);
+  
+- Grid.js for data tables:
+  - Create a container: \`<div id="table"></div>\`
+  - Initialize with configuration:
+    \`\`\`javascript
+    new gridjs.Grid({
+      columns: ['Name', 'Email', 'Phone'],
+      data: [
+        ['John', 'john@example.com', '(123) 456-7890'],
+        ['Jane', 'jane@example.com', '(123) 456-7890']
+      ],
+      search: true,
+      sort: true,
+      pagination: {
+        limit: 10
+      }
+    }).render(document.getElementById('table'));
+    \`\`\`
+  - For server-side data, use the server property:
+    \`\`\`javascript
+    new gridjs.Grid({
+      columns: ['Name', 'Email'],
+      server: {
+        url: 'https://api.example.com/data',
+        then: data => data.map(user => [user.name, user.email])
+      }
+    }).render(element);
+    \`\`\`
+</MODULE_USAGE>
+
+<DATA_DRIVEN_DASHBOARD>
+For data-driven applications, include the following key features:
+- Advanced data filtering with simple JavaScript filter functions
+- Dynamic sorting options for tables with Grid.js or vanilla JS sort functions
+- Clear loading states using skeleton loaders or spinner elements
+- Responsive dashboard layout with cards (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4)
+- Data export functionality with simple CSV generation
+- Summary metrics with visual indicators for trends
+- Simple local storage for saving user preferences:
+  \`\`\`javascript
+  // Save settings
+  localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+  
+  // Load settings
+  const settings = JSON.parse(localStorage.getItem('dashboardSettings')) || defaultSettings;
+  \`\`\`
+
+IMPORTANT: Do NOT make up data. If sample data is needed, use placeholder data that is clearly indicated as such, or create generic examples that don't imply real statistics/patterns.
+IMPORTANT: NEVER invent URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context. For images and other assets, strictly use the URLs from the ASSETS_TO_USE section when available.
+</DATA_DRIVEN_DASHBOARD>
+
+<CDN_ORDER>
+<head>:
+  1. Tailwind CSS
+  2. Font Awesome CSS
+  3. Grid.js CSS (if using data tables)
+  4. ApexCharts
+</head>
+<body> (at end):
+  1. Grid.js (if using data tables)
+  2. ApexCharts
+  3. Your custom JavaScript
+</CDN_ORDER>
 
 <OUTPUT_FORMAT>
-- Output ONLY the complete HTML code.
-- **NO markdown formatting** (like \`\`\`html).
-- **NO explanations** before or after the code.
-- Ensure HTML is well-formed and valid.
-- Include the Vue 3 Global Build CDN link (\`https://unpkg.com/vue@3/dist/vue.global.js\`).
-- Include the Tailwind CSS CDN link (\`https://cdn.tailwindcss.com\`).
-- Include Font Awesome CDN link.
-- Include Mermaid CDN link and initialization script.
-- Include Chart.js CDN link.
-- Wrap the main Vue application logic in a single \`<script>\` tag before the closing \`</body>\` tag.
-- Mount the Vue app to \`<div id="app">\`.
-- Add HTML comments for major sections.
+IMPORTANT: DO NOT wrap your HTML output with triple backticks (\`\`\`). Return ONLY the raw HTML document starting with <!DOCTYPE html>
 </OUTPUT_FORMAT>
+
+Output ONLY the complete HTML code without explanations. Include all necessary CDN links and proper initialization.
 </SYSTEM_PROMPT>`;
 
       // Define the user prompt
@@ -285,7 +304,7 @@ ${instructions}
 </USER_INSTRUCTIONS>
 ${contextString}${assetsString}
 
-Please generate a complete, beautiful, accessible, and functional single-page website using Vue.js (Global Build via CDN) and Tailwind CSS, following all requirements. Ensure responsiveness and use Vue transitions for subtle animations where appropriate.`;
+Please generate a complete, beautiful, accessible, and functional single-page website using vanilla JavaScript and Tailwind CSS, following all requirements. Choose a primary color palette that fits the design aesthetic. Ensure responsiveness and use CSS transitions for subtle animations where appropriate. For data-driven applications, include simple filtering, sorting, and search capabilities without making up data. Use ApexCharts for data visualization with vanilla JavaScript and Grid.js for interactive tables.`;
 
       // Generate the website using AI
       const result = await generateText({
@@ -294,13 +313,20 @@ Please generate a complete, beautiful, accessible, and functional single-page we
         prompt: userPrompt,
       });
 
+      // Process the result to remove any markdown formatting if present
+      let htmlContent = result.text;
+      // Remove triple backticks if the AI accidentally includes them
+      if (htmlContent.startsWith("```") || htmlContent.startsWith("```html")) {
+        htmlContent = htmlContent.replace(/^```(html)?\n/, "").replace(/```$/, "");
+      }
+
       // Save the HTML content to the database
-      const htmlId = await addHtmlVersion(projectId, result.text);
+      const htmlId = await addHtmlVersion(projectId, htmlContent);
 
       // Deploy the HTML to a domain
       const deployedUrl = await deployHtmlToDomain(
         project.domain, 
-        result.text
+        htmlContent
       );
       console.log(`Deployed website to: ${deployedUrl}`);
 

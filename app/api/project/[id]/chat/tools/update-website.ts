@@ -124,35 +124,63 @@ ${context}
       if (targetSection) {
         // Define system prompt for section update
         const sectionSystemPrompt = `<SYSTEM_PROMPT>
-You are an expert at updating specific sections of websites using HTML, Tailwind CSS, and **Vue.js** (Global Build via CDN).
-Your task is to generate an updated version of the \`${targetSection}\` section based on the provided instructions and context, maintaining accessibility and incorporating Vue transitions for subtle animations.
+Update a specific section of a website built with HTML, Tailwind CSS, and vanilla JavaScript.
 
-<TECHNICAL_REQUIREMENTS>
-- Generate ONLY the HTML for the specific section requested.
-- Use Tailwind CSS for styling.
-- Use Vue.js (Options API) for any interactivity within the section. Assume the necessary Vue instance and data/methods exist in the main script.
-- Use Vue's \`<transition>\` or \`<transition-group>\` for smooth transitions on dynamic elements *within the section*.
-- Output MUST begin with \`<!-- ${targetSection} begin -->\` and end with \`<!-- ${targetSection} end -->\`.
-- Do not include any surrounding HTML, \`<script>\` tags, or \`<style>\` tags unless absolutely necessary for the specific element (e.g., a transition style).
-</TECHNICAL_REQUIREMENTS>
+<SECTION_UPDATE_REQUIREMENTS>
+- Generate ONLY the HTML for the requested '${targetSection}' section
+- Use Tailwind CSS exclusively for styling
+- Use vanilla JavaScript for interactivity - NO frameworks like Vue or React
+- Add smooth transitions using CSS transition classes where appropriate
+- Begin output with <!-- ${targetSection} begin --> and end with <!-- ${targetSection} end -->
+- Do not include <script> tags unless absolutely necessary for the section
+- DO NOT create custom canvas or SVG elements unless they're from external modules
+</SECTION_UPDATE_REQUIREMENTS>
 
-<VUE_GUIDELINES>
-- Write Vue template syntax directly within the HTML.
-- Use standard Vue directives like \`v-if\`, \`v-for\`, \`v-bind\` (or shorthand \`:\`), \`v-on\` (or shorthand \`@\`), \`v-model\`.
-- Assume data properties and methods referenced (e.g., in \`@click\` or \`v-if\`) are defined in the main Vue instance elsewhere in the full page script.
-- Define transition CSS classes if using \`<transition>\` (use a \`<style>\` tag *only* if necessary for the transition itself, placed near the transition element).
-</VUE_GUIDELINES>
+<DESIGN_CONSISTENCY>
+- Match existing styling patterns (colors, typography, spacing)
+- Use semantic HTML elements with proper ARIA attributes
+- Ensure responsive design with Tailwind breakpoint modifiers
+</DESIGN_CONSISTENCY>
 
-<ACCESSIBILITY_REQUIREMENTS>
-- Ensure all accessibility requirements (semantic HTML, ARIA, alt text, labels, focus management, contrast) are met *within the generated section*.
-- Use Vue's binding capabilities (e.g., \`:aria-label\`, \`:alt\`) for dynamic accessibility attributes if needed.
-</ACCESSIBILITY_REQUIREMENTS>
+<MODULE_USAGE>
+- Tailwind CSS: 
+  - Use utilities directly in HTML classes
+  - Follow existing color palette and design system
+  - For any new UI elements, maintain consistency with existing components
 
-<OUTPUT_FORMAT>
-- Output only the HTML for the section, including the start/end comments.
-- NO markdown formatting or explanations.
-- Ensure HTML is valid and complete *for the section*.
-</OUTPUT_FORMAT>
+- Vanilla JavaScript:
+  - Use DOM manipulation methods like getElementById(), querySelector()
+  - Add event listeners with addEventListener()
+  - Update content with element.innerHTML or element.textContent
+  - For displaying data, generate HTML strings or create elements programmatically
+
+- Font Awesome icons:
+  - Use existing icon style (fas, far, fab) for consistency
+  - Match existing size classes (fa-sm, fa-lg, etc.)
+
+- ApexCharts (for data visualizations):
+  - Use standard initialization with new ApexCharts(element, options)
+  - Match existing chart styles and configurations
+  - Use appropriate chart types for the data
+  - Initialize charts inside JavaScript blocks at the end of the section
+
+- Grid.js (only for larger tables):
+  - Add a container div for the table
+  - Initialize with new gridjs.Grid() and appropriate options
+  - Add search, pagination, and sorting as needed
+</MODULE_USAGE>
+
+<DATA_DRIVEN_SECTIONS>
+If this section is part of a data-driven dashboard:
+- Add appropriate filtering/search controls with vanilla JS event handlers
+- Ensure interactivity with proper DOM event listeners
+- Include loading/empty states for data-dependent elements
+- Add clear data display with proper headings and structure
+- IMPORTANT: Do NOT make up data. Use placeholders or generic examples when needed.
+- IMPORTANT: NEVER invent URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context.
+</DATA_DRIVEN_SECTIONS>
+
+Output ONLY the section HTML (with begin/end comments) and NO explanations.
 </SYSTEM_PROMPT>`;
 
         // Define user prompt for section update
@@ -166,7 +194,7 @@ ${updateInstructions}
 ${contextString}
 <TARGET_SECTION>${targetSection}</TARGET_SECTION>${assetsString}
 
-Please generate the updated HTML for just the \`${targetSection}\` section, using Vue.js (Options API) for interactivity and transitions, ensuring strong accessibility.`;
+Please generate the updated HTML for just the \`${targetSection}\` section, using vanilla JavaScript for interactivity and CSS transitions, ensuring strong accessibility.`;
 
         // First, generate the updated section
         const sectionResult = await generateText({
@@ -177,18 +205,17 @@ Please generate the updated HTML for just the \`${targetSection}\` section, usin
 
         // Define system prompt for stitching
         const stitchSystemPrompt = `<SYSTEM_PROMPT>
-You are an expert at precisely updating HTML documents.
-Your task is to replace a specific section in the provided HTML document with new HTML content for that section.
+Precisely update an HTML document by replacing a specific section.
 
 <RULES>
-1. Find the section marked by HTML comments: \`<!-- ${targetSection} begin -->\` and \`<!-- ${targetSection} end -->\`.
-2. Replace **everything** between these comments (inclusive of the comments themselves) with the new section content provided.
-3. If the section markers don't exist in the original HTML, try to intelligently find the logical place for the \`${targetSection}\` based on semantic structure (e.g., replace existing \`<header>\`, insert before \`<footer>\`) and insert the new section content (which includes its own markers).
-4. **Crucially, do not modify any other part of the HTML document**, especially \`<script>\` tags containing the main Vue.js application logic, unless the update instruction explicitly requires modifying the core Vue app script.
-5. Ensure the resulting HTML remains valid.
+1. Find section marked by: <!-- ${targetSection} begin --> and <!-- ${targetSection} end -->
+2. Replace everything between these comments (inclusive) with the new section content
+3. If markers don't exist, find logical place for ${targetSection} based on semantic structure
+4. Do NOT modify any other parts of the HTML document
+5. Preserve all existing <script> tags unless explicitly instructed otherwise
 </RULES>
 
-<OUTPUT_FORMAT>Output ONLY the complete, updated HTML document with no additional explanations or markdown formatting.</OUTPUT_FORMAT>
+Output ONLY the complete updated HTML document without explanations.
 </SYSTEM_PROMPT>`;
 
         // Define user prompt for stitching
@@ -208,52 +235,256 @@ Please integrate the new section content into the current HTML, replacing the ex
           system: stitchSystemPrompt,
           prompt: stitchUserPrompt,
         });
+        
+        // Process the result to remove any markdown formatting if present
+        let processedHtml = stitchResult.text;
+        // Remove triple backticks if the AI accidentally includes them
+        if (processedHtml.startsWith("```") || processedHtml.startsWith("```html")) {
+          processedHtml = processedHtml.replace(/^```(html)?\n/, "").replace(/```$/, "");
+        }
 
-        updatedHtml = stitchResult.text;
+        updatedHtml = processedHtml;
       } else {
         // If no specific section is targeted, update the entire website
         // Define system prompt for full update
         const fullUpdateSystemPrompt = `<SYSTEM_PROMPT>
-You are an expert website updater. You modify existing single-page websites built with HTML, Tailwind CSS, and Vue.js (Global Build via CDN) based on user requirements, ensuring accessibility and incorporating subtle animations with Vue transitions.
+Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript.
 
-<TECHNICAL_REQUIREMENTS>
-- Use the existing HTML structure and Vue.js (Options API) application as a base.
-- Maintain the overall layout and design language unless instructed otherwise.
-- Use Tailwind CSS for styling (already included via CDN).
-- Use Vue.js (Options API, Global Build via CDN) for all interactivity modifications.
-- Use Vue's \`<transition>\` or \`<transition-group>\` for subtle animations on updated or new dynamic elements.
-- **Modify the existing Vue app instance** within the main \`<script>\` tag (data, methods, computed, mounted, etc.) as needed to fulfill the update request. Add new properties/methods or update existing ones.
-- Preserve important elements and content unless instructed to change.
-- Add/update HTML comments (\`<!-- section name begins -->\` / \`<!-- section name ends -->\`) to mark significantly changed sections.
-- Incorporate provided assets appropriately using Vue's data binding if necessary (e.g., \`:src\`).
-</TECHNICAL_REQUIREMENTS>
+<UPDATE_REQUIREMENTS>
+- Use the existing HTML structure as a foundation
+- Maintain design consistency while implementing the requested changes
+- Keep all existing CDNs, adding any necessary new ones in proper order:
+  - Tailwind CSS: \`<script src="https://cdn.tailwindcss.com"></script>\`
+  - Font Awesome: \`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\`
+  - Grid.js (for tables): \`<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>\` and \`<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">\`
+  - ApexCharts: \`<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>\`
+- Modify the JavaScript code to support new features
+- Ensure all animations are smooth using CSS transitions
+- Preserve existing content unless explicitly instructed to change it
+- DO NOT create custom canvas or SVG elements unless they're from external modules
+- Only use Grid.js for tables with moderate to large datasets
+- IMPORTANT: NEVER make up URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context.
+</UPDATE_REQUIREMENTS>
 
-<VUE_GUIDELINES>
-- **Modify Existing Instance**: Locate the main \`Vue.createApp({...}).mount('#app')\` call and modify the object passed to \`createApp\`.
-- **Options API**: Work within the existing \`data()\`, \`methods\`, \`computed\`, \`mounted()\`, etc., options.
-- **Reactivity**: Ensure new or modified data properties are correctly defined within \`data()\` to be reactive.
-- **Lifecycle**: Use \`mounted()\` for setup logic (like initializing libraries) related to *new* elements, if needed.
-- **Consistency**: Maintain the coding style and structure of the existing Vue script.
-- **No Build Step**: Changes must work directly in the browser via CDN.
-</VUE_GUIDELINES>
+<TABLE_GENERATION_GUIDELINES>
+- For simple tables (less than 20 rows), use standard HTML tables with Tailwind styling:
+  \`\`\`html
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white">
+      <thead class="bg-gray-100">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">John Doe</td>
+          <td class="px-6 py-4 whitespace-nowrap">Developer</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  \`\`\`
 
-<ACCESSIBILITY_REQUIREMENTS>
-- Maintain or **improve** existing accessibility features throughout the update.
-- Use semantic HTML, ARIA roles/attributes, sufficient contrast, descriptive alt text (use \`:alt\` for dynamic images), hierarchical headings, keyboard navigation, form labels (use \`:for\` with unique IDs), and visible focus indicators.
-- Ensure dynamically updated content remains accessible.
-</ACCESSIBILITY_REQUIREMENTS>
+- For larger datasets or interactive tables, use Grid.js:
+  \`\`\`html
+  <div id="table-container"></div>
+  <script>
+    new gridjs.Grid({
+      columns: ['Name', 'Title', 'Email'],
+      data: [
+        ['John', 'Developer', 'john@example.com'],
+        ['Jane', 'Designer', 'jane@example.com']
+      ],
+      search: true,
+      pagination: {
+        limit: 10
+      },
+      sort: true
+    }).render(document.getElementById('table-container'));
+  </script>
+  \`\`\`
 
-<IMPORTANT_GUIDANCE>
-- **Respect existing structure and Vue logic.** Only modify what's necessary.
-- **Focus on the specific update instructions.** Avoid unnecessary refactoring.
-- Maintain consistency with the existing website style and Vue implementation.
-</IMPORTANT_GUIDANCE>
+- For searchable/filterable tables, add simple filter functionality:
+  \`\`\`html
+  <input type="text" id="tableSearch" class="px-4 py-2 border rounded mb-4" placeholder="Search table...">
+  <table id="dataTable"><!-- table contents --></table>
+  <script>
+    document.getElementById('tableSearch').addEventListener('keyup', function() {
+      const searchText = this.value.toLowerCase();
+      const table = document.getElementById('dataTable');
+      const rows = table.getElementsByTagName('tr');
+      
+      for (let i = 1; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        let matchFound = false;
+        
+        for (let j = 0; j < cells.length; j++) {
+          if (cells[j].textContent.toLowerCase().includes(searchText)) {
+            matchFound = true;
+            break;
+          }
+        }
+        
+        rows[i].style.display = matchFound ? '' : 'none';
+      }
+    });
+  </script>
+  \`\`\`
+
+- Always use <th scope="col"> for table headers and include appropriate accessibility attributes
+- Include empty state handling: "No data available" message when table is empty
+</TABLE_GENERATION_GUIDELINES>
+
+<MODULE_USAGE>
+- Tailwind CSS: 
+  - Use utilities directly in HTML classes
+  - If modifying color scheme, update the tailwind.config section:
+    \`<script>tailwind.config = {theme: {extend: {colors: {primary: {...}}}}}</script>\`
+  - Reference color palette: https://tailwindcss.com/docs/colors
+  - Customize colors based on the design aesthetic, not fixed to blue
+
+- Vanilla JavaScript:
+  - Use modern JavaScript (ES6+) features for DOM manipulation
+  - For dynamic content, use:
+    \`\`\`javascript
+    document.getElementById('element').innerHTML = '<p>New content</p>';
+    \`\`\`
+  - For event handling:
+    \`\`\`javascript
+    document.getElementById('button').addEventListener('click', function() {
+      // Action to perform when clicked
+    });
+    \`\`\`
+  - For fetching data:
+    \`\`\`javascript
+    fetch('url/to/data')
+      .then(response => response.json())
+      .then(data => {
+        // Process data
+      })
+      .catch(error => console.error('Error:', error));
+    \`\`\`
+    
+  - For accessing public APIs with CORS issues, use the provided CORS proxy:
+    \`\`\`javascript
+    // Use this format: https://cors.notesnook.com/[target-url]
+    fetch('https://cors.notesnook.com/https://api.example.com/data')
+      .then(response => response.json())
+      .then(data => {
+        // Process data
+      })
+      .catch(error => console.error('Error:', error));
+    \`\`\`
+
+- Font Awesome:
+  - Use with \`<i class="fas fa-icon-name"></i>\` for solid style icons
+  - Use with \`<i class="far fa-icon-name"></i>\` for regular style icons
+  - For larger icons: \`fa-lg\`, \`fa-2x\`, etc.
+
+- ApexCharts:
+  - Create a container element:
+    \`<div id="chart"></div>\`
+  - Initialize the chart:
+    \`\`\`javascript
+    const chart = new ApexCharts(document.querySelector("#chart"), {
+      chart: {
+        type: 'line',
+        height: 350
+      },
+      series: [{
+        name: 'Data Name',
+        data: [30, 40, 50, 60, 70]
+      }],
+      xaxis: {
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May']
+      }
+    });
+    chart.render();
+    \`\`\`
+  - Update chart data dynamically:
+    \`\`\`javascript
+    chart.updateSeries([{
+      data: newData
+    }]);
+    \`\`\`
+  - Support for multiple chart types: line, area, bar, column, pie, donut, radar
+
+- Grid.js for data tables:
+  - Create a container: \`<div id="table"></div>\`
+  - Initialize with configuration:
+    \`\`\`javascript
+    new gridjs.Grid({
+      columns: ['Name', 'Email', 'Phone'],
+      data: [
+        ['John', 'john@example.com', '(123) 456-7890'],
+        ['Jane', 'jane@example.com', '(123) 456-7890']
+      ],
+      search: true,
+      sort: true,
+      pagination: {
+        limit: 10
+      }
+    }).render(document.getElementById('table'));
+    \`\`\`
+  - For server-side data:
+    \`\`\`javascript
+    new gridjs.Grid({
+      columns: ['Name', 'Email'],
+      server: {
+        url: 'https://api.example.com/data',
+        then: data => data.map(user => [user.name, user.email])
+      }
+    }).render(document.getElementById('table'));
+    \`\`\`
+</MODULE_USAGE>
+
+<DESIGN_SYSTEM>
+- Colors: Match the site's aesthetic, not fixed to blue
+  (primary: chosen to match design, success: green-500, warning: amber-500, error: red-500)
+- Typography: Maintain hierarchy with proper font sizes/weights 
+  (h1: text-3xl/4xl font-bold, h2: text-2xl font-semibold, body: text-base text-gray-700)
+- Components: Use consistent styling for UI elements
+  (buttons: px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md)
+- Spacing: Apply consistent rhythm (sections: my-12, components: my-6, elements: my-3)
+- Data: For tables/charts, ensure consistent styling and responsive behavior
+</DESIGN_SYSTEM>
+
+<DATA_DRIVEN_DASHBOARD>
+For data-driven applications, enhance with these features:
+- Simple data filtering with vanilla JavaScript functions
+- Dynamic sorting for tables using Grid.js or custom sort functions
+- Clear loading states with spinners or skeleton loaders
+- Responsive dashboard layouts (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4)
+- Basic data export functionality (CSV generation)
+- Summary metrics with visual indicators for trends
+- User preferences with localStorage:
+  \`\`\`javascript
+  // Save settings
+  localStorage.setItem('dashboardSettings', JSON.stringify(settings));
+  
+  // Load settings
+  const settings = JSON.parse(localStorage.getItem('dashboardSettings')) || defaultSettings;
+  \`\`\`
+
+IMPORTANT: Do NOT make up data. If sample data is needed, use placeholder data that is clearly indicated as such, or create generic examples that don't imply real statistics/patterns.
+IMPORTANT: NEVER invent URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context. For images and other assets, strictly use the URLs from the ASSETS_TO_USE section when available.
+</DATA_DRIVEN_DASHBOARD>
+
+<COMMON_ISSUES>
+- If JavaScript isn't working: Check for console errors and ensure script order
+- If transitions don't work: Verify CSS transition properties are correctly set
+- If ApexCharts isn't working: Check that the container element exists before initialization
+- If data tables aren't working: Verify Grid.js is properly loaded and initialized
+- If colors need updating: Adjust tailwind.config theme settings
+</COMMON_ISSUES>
 
 <OUTPUT_FORMAT>
-- Output ONLY the complete, updated HTML code.
-- **NO markdown formatting** or explanations.
-- Ensure the output is a single, valid HTML file ready to be viewed.
+IMPORTANT: DO NOT wrap your HTML output with triple backticks (\`\`\`). Return ONLY the raw HTML document starting with <!DOCTYPE html>
 </OUTPUT_FORMAT>
+
+Output ONLY the complete updated HTML with NO explanations or markdown formatting.
 </SYSTEM_PROMPT>`;
 
         // Define user prompt for full update
@@ -266,7 +497,7 @@ ${updateInstructions}
 </UPDATE_INSTRUCTIONS>
 ${contextString}${assetsString}
 
-Please update the website (HTML structure and the Vue.js script within it) according to these instructions. Maintain the overall structure/design and ensure strong accessibility. Use Vue transitions for subtle animations where appropriate.`;
+Please update the website (HTML structure and JavaScript code) according to these instructions. Maintain the overall structure/design and ensure strong accessibility. Use CSS transitions for subtle animations where appropriate. For data-driven applications, enhance filtering, sorting, and search capabilities without making up data. Choose a primary color palette that fits the design aesthetic. Use ApexCharts for data visualization with vanilla JavaScript and Grid.js for interactive tables.`;
 
         const result = await generateText({
           model: openai("gpt-4.1"),
@@ -274,7 +505,14 @@ Please update the website (HTML structure and the Vue.js script within it) accor
           prompt: fullUpdateUserPrompt,
         });
 
-        updatedHtml = result.text;
+        // Process the result to remove any markdown formatting if present
+        let processedHtml = result.text;
+        // Remove triple backticks if the AI accidentally includes them
+        if (processedHtml.startsWith("```") || processedHtml.startsWith("```html")) {
+          processedHtml = processedHtml.replace(/^```(html)?\n/, "").replace(/```$/, "");
+        }
+        
+        updatedHtml = processedHtml;
       }
 
       // Save the updated HTML to the database
