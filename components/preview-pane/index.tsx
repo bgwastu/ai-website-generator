@@ -1,6 +1,7 @@
 "use client";
 
 import { Asset } from "@/lib/query";
+import { cn } from "@/lib/utils";
 import React, { useState } from "react";
 import ImageUpload from "./image-upload";
 import WebsitePreview from "./website-preview";
@@ -15,6 +16,7 @@ export interface PreviewPaneProps {
   projectId: string;
   deployedUrl: string | null;
   assets: Asset[];
+  className?: string;
 }
 
 const PreviewPane: React.FC<PreviewPaneProps> = ({
@@ -26,11 +28,12 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
   projectId,
   deployedUrl,
   assets,
+  className,
 }) => {
   const [activeTab, setActiveTab] = useState<"version" | "files">("version");
 
   return (
-    <div className="border border-zinc-200 rounded-md h-full flex flex-col">
+    <div className={cn("h-full flex flex-col", className)}>
       {/* Tabs */}
       <div className="flex gap-1 px-4 pt-2 bg-white border-b border-zinc-100">
         <button

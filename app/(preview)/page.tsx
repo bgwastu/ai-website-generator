@@ -6,7 +6,6 @@ import LandingPage from "@/components/landing-page";
 import PreviewPane from "@/components/preview-pane";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { ChevronLeft, GlobeIcon, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
@@ -272,10 +271,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      <motion.div
-        layout
-        className="flex flex-col lg:flex-row h-screen gap-2 pb-4"
-      >
+      <div className="flex flex-col lg:flex-row h-screen">
         <div className="flex-1 w-full h-full lg:max-w-[600px] flex flex-col">
           <Chat
             messages={messages}
@@ -297,21 +293,7 @@ export default function Home() {
         </div>
         {/* Desktop Preview Pane */}
         <div className="hidden lg:flex flex-1 flex-col h-full">
-          <motion.div
-            className="h-full flex-1 flex flex-col"
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-          >
-            {/* Header for desktop */}
-            <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
-              <GlobeIcon size={18} className="text-blue-500" />
-              <span className="text-sm font-medium text-zinc-700">
-                Website Builder
-              </span>
-            </div>
+          <div className="h-full flex-1 flex flex-col">
             <PreviewPane
               htmlVersions={htmlVersions.map(
                 (v: { htmlContent: string }) => v.htmlContent
@@ -325,9 +307,9 @@ export default function Home() {
               deployedUrl={deployedUrl}
               assets={project?.assets || []}
             />
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

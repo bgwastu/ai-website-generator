@@ -1,14 +1,17 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
-  MaximizeIcon,
-  UploadIcon,
-  XIcon,
+  Globe,
+  Layout,
+  Loader,
+  UploadIcon
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import { Badge } from "../ui/badge";
 
 function injectLinkHandler(html: string): string {
   const handlerScript = `
@@ -54,17 +57,12 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
     htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
   );
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const modalIframeRef = useRef<HTMLIFrameElement>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Keep currentVersionIndex in sync with htmlVersions length
   useEffect(() => {
     if (htmlVersions.length === 0) {
       setCurrentVersionIndex(0);
-    } else if (currentVersionIndex > htmlVersions.length - 1) {
-      setCurrentVersionIndex(htmlVersions.length - 1);
-    } else if (currentVersionIndex === htmlVersions.length - 2) {
-      // If a new version is added, jump to the latest
+    } else {
       setCurrentVersionIndex(htmlVersions.length - 1);
     }
   }, [htmlVersions.length]);
@@ -85,231 +83,137 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   const hasNextVersion = currentVersionIndex < htmlVersions.length - 1;
   const isDeployed = deployedVersionIndex === currentVersionIndex;
 
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isModalOpen]);
-
-  useEffect(() => {
-    if (!isModalOpen) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setIsModalOpen(false);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isModalOpen]);
+  // Function to open preview in a new tab
+  const openFullPreview = () => {
+    if (!htmlContent) return;
+    
+    // Create a new blob from the HTML content
+    const blob = new Blob([safeHtmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Open in a new tab
+    window.open(url, '_blank');
+    
+    // Clean up the URL object after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {htmlContent && (
-        <div className="bg-zinc-50 px-3 py-2 flex items-center gap-2 border-b border-zinc-200">
-          {htmlVersions.length > 0 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToPreviousVersion();
-                }}
-                disabled={!hasPreviousVersion}
-                className={`p-1 rounded ${
-                  hasPreviousVersion
-                    ? "text-zinc-700 hover:bg-zinc-200"
-                    : "text-zinc-400 cursor-not-allowed"
-                }`}
-                title="Previous version"
-              >
-                <ChevronLeftIcon size={14} />
-              </button>
-              <span className="mx-1 text-zinc-600 flex items-center gap-1 text-sm">
-                {`Version ${versionNumber}`}
-                {isDeployed && (
-                  <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
-                    Deployed
+        <div className="bg-white border-b border-zinc-200 shadow-sm">
+          <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-2">
+            {/* Version Controls Group */}
+            <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+              <div className="bg-zinc-100 p-1 rounded-md flex items-center">
+                <Button
+                  onClick={goToPreviousVersion}
+                  disabled={!hasPreviousVersion}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 rounded-sm"
+                  title="Previous version"
+                >
+                  <ChevronLeftIcon size={16} />
+                </Button>
+                <div className="flex items-center px-2">
+                  <span className="text-xs font-medium text-zinc-700">
+                    Version {versionNumber}
                   </span>
-                )}
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  goToNextVersion();
-                }}
-                disabled={!hasNextVersion}
-                className={`p-1 rounded ${
-                  hasNextVersion
-                    ? "text-zinc-700 hover:bg-zinc-200"
-                    : "text-zinc-400 cursor-not-allowed"
-                }`}
-                title="Next version"
-              >
-                <ChevronRightIcon size={14} />
-              </button>
+                </div>
+                <Button
+                  onClick={goToNextVersion}
+                  disabled={!hasNextVersion}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 rounded-sm"
+                  title="Next version"
+                >
+                  <ChevronRightIcon size={16} />
+                </Button>
+              </div>
+              
+              {isDeployed && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 h-8 ml-2 sm:ml-3">
+                  <Globe size={12} className="mr-1" />
+                  Deployed
+                </Badge>
+              )}
             </div>
-          )}
-          <div className="flex items-center gap-2 ml-auto">
-            {isDeployed && deployedUrl ? (
-              <a
-                href={deployedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors flex items-center gap-1"
-                title={`View deployed site: ${deployedUrl}`}
-                onClick={e => e.stopPropagation()}
-              >
-                <ExternalLinkIcon size={14} /> See the site
-              </a>
-            ) : isDeployed && !deployedUrl ? (
-              <span className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white flex items-center gap-1 select-none">
-                <UploadIcon size={14} className="opacity-60" /> Deployed
-              </span>
-            ) : !isDeployed && htmlContent ? (
-              <button
-                onClick={() => onDeploy(htmlContent, currentVersionIndex)}
-                disabled={isUploading || !htmlContent}
-                className="ml-2 px-3 py-1 rounded text-xs font-medium border border-blue-500 text-blue-700 bg-white hover:bg-blue-50 transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <UploadIcon size={14} />
-                {isUploading ? "Deploying..." : "Deploy"}
-              </button>
-            ) : null}
+            
+            {/* Action Buttons Group */}
+            <div className="flex flex-row flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
+              {isDeployed && deployedUrl ? (
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 w-full sm:w-auto"
+                >
+                  <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLinkIcon size={14} className="mr-1.5" /> 
+                    View live site
+                  </a>
+                </Button>
+              ) : !isDeployed && htmlContent ? (
+                <Button
+                  onClick={() => onDeploy(htmlContent, currentVersionIndex)}
+                  disabled={isUploading}
+                  variant="outline"
+                  size="sm"
+                  className={`h-8 text-xs w-full sm:w-auto ${isUploading ? 'bg-zinc-100' : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800'}`}
+                >
+                  <UploadIcon size={14} className="mr-1.5" />
+                  {isUploading ? "Deploying..." : "Deploy version"}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
-      <div
-        className="flex-grow overflow-auto relative cursor-pointer group min-h-0"
-        onClick={() => setIsModalOpen(true)}
-        style={{ minHeight: 0 }}
-      >
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
-          <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 text-sm bg-black bg-opacity-50 px-2 py-1 rounded">
-            <MaximizeIcon size={14} /> Click to enlarge
-          </span>
-        </div>
+      <div className="flex-grow overflow-auto relative min-h-0">
         {htmlContent ? (
           <iframe
             ref={iframeRef}
             srcDoc={safeHtmlContent}
-            title="Generated Website Preview Portal"
+            title="Generated Website Preview"
             sandbox="allow-scripts allow-same-origin"
             width="100%"
             height="100%"
             style={{
               border: "none",
-              pointerEvents: "none",
               minHeight: 0,
               height: "100%",
             }}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-zinc-400 text-sm">
-            No preview available yet.
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] bg-zinc-50 text-zinc-500">
+            <div className="flex flex-col items-center gap-4 max-w-md p-6 text-center">
+              <div className="rounded-full bg-zinc-100 p-4">
+                <Layout size={32} className="text-zinc-400" />
+              </div>
+              <h3 className="text-lg font-medium text-zinc-700">No preview available</h3>
+              <p className="text-sm text-zinc-500">
+                Describe the website you want to build in the chat to generate a
+                preview. Your website will appear here once it&apos;s created.
+              </p>
+            </div>
           </div>
         )}
         {isPreviewLoading && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center pointer-events-none">
-            <span className="text-zinc-700 text-sm font-medium animate-pulse">
-              Generating new preview...
-            </span>
+          <div className="absolute inset-0 bg-white backdrop-blur-sm flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center gap-4 max-w-xs text-center">
+              <Loader size={28} className="text-zinc-600 animate-spin" />
+              <div>
+                <h3 className="text-base font-medium text-zinc-800">Generating preview</h3>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Building your website with AI. This may take a moment...
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4"
-          onClick={() => setIsModalOpen(false)}
-        >
-          <div
-            className="relative bg-white w-full h-full rounded-lg shadow-xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center p-2 border-b border-zinc-200 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-zinc-700">
-                  Website Preview
-                </span>
-                {htmlVersions.length > 0 && (
-                  <div className="flex items-center border-l border-zinc-300 pl-2 ml-2 gap-1">
-                    <button
-                      onClick={goToPreviousVersion}
-                      disabled={!hasPreviousVersion}
-                      className={`p-1 rounded ${
-                        hasPreviousVersion
-                          ? "text-zinc-700 hover:bg-zinc-200"
-                          : "text-zinc-400 cursor-not-allowed"
-                      }`}
-                      title="Previous version"
-                    >
-                      <ChevronLeftIcon size={16} />
-                    </button>
-                    <span className="mx-1 text-sm text-zinc-600 flex items-center gap-1">
-                      {`Version ${versionNumber}`}
-                      {isDeployed && (
-                        <span className="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold border border-green-200">
-                          Deployed
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      onClick={goToNextVersion}
-                      disabled={!hasNextVersion}
-                      className={`p-1 rounded ${
-                        hasNextVersion
-                          ? "text-zinc-700 hover:bg-zinc-200"
-                          : "text-zinc-400 cursor-not-allowed"
-                      }`}
-                      title="Next version"
-                    >
-                      <ChevronRightIcon size={16} />
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="text-zinc-500 hover:text-zinc-800 p-1 rounded-full hover:bg-zinc-200"
-                  aria-label="Close preview"
-                >
-                  <XIcon size={18} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-grow overflow-auto relative">
-              {htmlContent ? (
-                <iframe
-                  ref={modalIframeRef}
-                  srcDoc={safeHtmlContent}
-                  title="Generated Website Preview Full"
-                  sandbox="allow-scripts allow-same-origin"
-                  width="100%"
-                  height="100%"
-                  style={{ border: "none" }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-zinc-400 text-sm">
-                  No preview available yet.
-                </div>
-              )}
-              {isPreviewLoading && (
-                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center pointer-events-none">
-                  <span className="text-zinc-700 text-sm font-medium animate-pulse">
-                    Generating new preview...
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

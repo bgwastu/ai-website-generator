@@ -1,8 +1,14 @@
 import Input, { AttachmentPreview } from "@/components/input";
 import { useScrollToBottom } from "@/components/use-scroll-to-bottom";
+import { cn } from "@/lib/utils";
 import { Message as MessageType } from "@ai-sdk/react";
-import { motion } from "framer-motion";
-import { AlertTriangle, BotIcon, Clock, Loader, RotateCcw, UserIcon, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  BotIcon,
+  Loader,
+  RotateCcw,
+  UserIcon
+} from "lucide-react";
 import Image from "next/image";
 import React from "react";
 import { Markdown } from "./markdown";
@@ -14,6 +20,7 @@ export interface ChatProps {
   status: string;
   error: Error | null;
   reload: () => void;
+  className?: string;
 }
 
 // Extended type for tool results
@@ -31,7 +38,10 @@ function getToolCallInfo(message: MessageType) {
       return {
         toolName: part.toolInvocation.toolName,
         state: part.toolInvocation.state,
-        result: part.toolInvocation.state === 'result' ? (part.toolInvocation.result as ToolResult | undefined) : undefined
+        result:
+          part.toolInvocation.state === "result"
+            ? (part.toolInvocation.result as ToolResult | undefined)
+            : undefined,
       };
     }
   }
@@ -42,27 +52,34 @@ function getToolCallInfo(message: MessageType) {
 function getLoadingText(toolName: string | undefined): string | null {
   if (!toolName) return null;
   switch (toolName) {
-    case "createWebsite": return "Creating your website...";
-    case "updateWebsite": return "Updating your website...";
-    case "getHtmlByVersion": return "Retrieving website version...";
-    default: return `Working with ${toolName}...`;
+    case "createWebsite":
+      return "Creating your website...";
+    case "updateWebsite":
+      return "Updating your website...";
+    case "getHtmlByVersion":
+      return "Retrieving website version...";
+    default:
+      return `Working with ${toolName}...`;
   }
 }
 
 const Message = ({ message }: { message: MessageType }) => {
   const { role, content } = message;
   const toolCallInfo = getToolCallInfo(message);
-  const isLoadingTool = toolCallInfo && toolCallInfo.state !== 'result';
-  const toolResult = toolCallInfo && toolCallInfo.state === 'result' ? toolCallInfo.result : null;
+  const isLoadingTool = toolCallInfo && toolCallInfo.state !== "result";
+  const toolResult =
+    toolCallInfo && toolCallInfo.state === "result"
+      ? toolCallInfo.result
+      : null;
 
-  const loadingText = toolCallInfo ? getLoadingText(toolCallInfo.toolName) : null;
+  const loadingText = toolCallInfo
+    ? getLoadingText(toolCallInfo.toolName)
+    : null;
 
   return (
-    <motion.div
+    <div
       id={message.id}
       className={`flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0`}
-      initial={{ y: 5, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
     >
       <div className="size-[28px] flex flex-col justify-center items-center flex-shrink-0 text-zinc-400">
         {role === "assistant" ? (
@@ -73,7 +90,11 @@ const Message = ({ message }: { message: MessageType }) => {
       </div>
       <div className="flex flex-col gap-2 w-full">
         <div className="flex flex-col gap-3 prose prose-zinc dark:prose-invert prose-sm max-w-none">
-          {typeof content === "string" ? <Markdown>{content.trim()}</Markdown> : content}
+          {typeof content === "string" ? (
+            <Markdown>{content.trim()}</Markdown>
+          ) : (
+            content
+          )}
         </div>
         {isLoadingTool && loadingText && (
           <TextShimmer className="font-mono text-sm" duration={1.5}>
@@ -133,7 +154,7 @@ const Message = ({ message }: { message: MessageType }) => {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -143,6 +164,7 @@ export function Chat({
   status,
   error,
   reload,
+  className,
 }: ChatProps) {
   const [input, setInput] = React.useState("");
   const handleLocalSend = (
@@ -154,13 +176,13 @@ export function Chat({
   };
   const [containerRef, endRef] = useScrollToBottom<HTMLDivElement>();
   return (
-    <div className="flex flex-col h-full">
+    <div className={cn("flex flex-col h-full", className)}>
       <div
         ref={containerRef}
         className="flex flex-col flex-1 items-center overflow-y-auto px-4 py-8 gap-12"
       >
         {messages.length === 0 && (
-          <motion.div className="h-[350px] w-full md:w-[500px] pt-20">
+          <div className="h-[350px] w-full md:w-[500px] pt-20">
             <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">
               <div className="flex flex-col justify-center gap-4 items-center text-zinc-900">
                 <p className="text-lg font-bold">AI Website Generator</p>
@@ -170,7 +192,7 @@ export function Chat({
                 </p>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
         {messages.map((m: any) => (
           <div key={m.id} className="flex flex-col w-full mx-auto">
@@ -179,27 +201,37 @@ export function Chat({
         ))}
         <div ref={endRef} />
       </div>
-      <div className="px-4">
+      <div>
         <div className="w-full flex flex-col">
           {(() => {
             // Find the latest assistant message
-            const latestAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
-            const latestToolCallInfo = latestAssistantMsg ? getToolCallInfo(latestAssistantMsg) : null;
+            const latestAssistantMsg = [...messages]
+              .reverse()
+              .find((m) => m.role === "assistant");
+            const latestToolCallInfo = latestAssistantMsg
+              ? getToolCallInfo(latestAssistantMsg)
+              : null;
             const showStatus =
-              (latestToolCallInfo && latestToolCallInfo.state !== 'result') ||
+              (latestToolCallInfo && latestToolCallInfo.state !== "result") ||
               status === "submitted" ||
               status === "streaming" ||
               status === "tooling";
-              
+
             if (!error && !showStatus) return null;
-            
             let statusText = null;
-            if (latestToolCallInfo && latestToolCallInfo.state !== 'result') {
+            if (latestToolCallInfo && latestToolCallInfo.state !== "result") {
               switch (latestToolCallInfo.toolName) {
-                case "createWebsite": statusText = "Creating website..."; break;
-                case "updateWebsite": statusText = "Updating website..."; break;
-                case "getHtmlByVersion": statusText = "Retrieving website version..."; break;
-                default: statusText = `Working with ${latestToolCallInfo.toolName}...`;
+                case "createWebsite":
+                  statusText = "Creating website...";
+                  break;
+                case "updateWebsite":
+                  statusText = "Updating website...";
+                  break;
+                case "getHtmlByVersion":
+                  statusText = "Retrieving website version...";
+                  break;
+                default:
+                  statusText = `Working with ${latestToolCallInfo.toolName}...`;
               }
             } else if (status === "tooling") {
               statusText = "Working with tools...";
@@ -208,14 +240,16 @@ export function Chat({
             } else if (status === "submitted") {
               statusText = "Initializing message...";
             }
-            
+
             return (
               <div className="flex flex-col gap-2 border-t border-l border-r border-b-0 border-zinc-200 rounded-t-md p-2 text-zinc-500 text-sm bg-zinc-50">
                 {error && (
                   <div className="w-full flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-red-500" />
-                      <span className="text-red-700">Something went wrong. Please try again.</span>
+                      <span className="text-red-700">
+                        Something went wrong. Please try again.
+                      </span>
                     </div>
                     <button
                       className="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-zinc-200 bg-white dark:bg-zinc-900"
@@ -250,7 +284,9 @@ export function Chat({
               status === "tooling"
             }
             className={
-              (status === "submitted" || status === "streaming" || status === "tooling")
+              status === "submitted" ||
+              status === "streaming" ||
+              status === "tooling"
                 ? "rounded-t-none"
                 : ""
             }
