@@ -130,6 +130,7 @@ Update a specific section of a website built with HTML, Tailwind CSS, and vanill
 - Generate ONLY the HTML for the requested '${targetSection}' section
 - Use Tailwind CSS exclusively for styling
 - Use vanilla JavaScript for interactivity - NO frameworks like Vue or React
+- IMPORTANT: For placeholder images, ALWAYS use https://fakeimg.pl/{width}x{height} with specific dimensions (e.g., https://fakeimg.pl/600x400)
 - IMPORTANT: For styled text in tables (like colored percentages), apply Tailwind classes directly to table cells (<td>) instead of using nested span elements
 - Add smooth transitions using CSS transition classes where appropriate
 - Begin output with <!-- ${targetSection} begin --> and end with <!-- ${targetSection} end -->
@@ -259,6 +260,7 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
   - Font Awesome: \`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\`
   - Grid.js (for tables): \`<script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>\` and \`<link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet">\`
   - ApexCharts: \`<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>\`
+- IMPORTANT: For placeholder images, ALWAYS use https://fakeimg.pl/{width}x{height} with specific dimensions (e.g., https://fakeimg.pl/600x400)
 - IMPORTANT: For styled text in tables (like colored percentages), apply Tailwind classes directly to table cells (<td>) instead of using nested span elements
 - Modify the JavaScript code to support new features
 - Ensure all animations are smooth using CSS transitions

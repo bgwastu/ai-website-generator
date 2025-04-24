@@ -84,6 +84,7 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
   
 - Use semantic HTML5 with proper ARIA attributes and keyboard accessibility
 - Use vanilla JavaScript for all interactive elements - NO frameworks like Vue or React
+- IMPORTANT: For placeholder images, ALWAYS use https://fakeimg.pl/{width}x{height} with specific dimensions (e.g., https://fakeimg.pl/600x400)
 - Use Tailwind classes exclusively (no inline styles) with color system based on the aesthetic of the design:
   - Choose a primary color palette that matches the overall design aesthetic
   - Secondary/accent colors should complement the primary color
