@@ -207,7 +207,7 @@ export function Chat({
         )}
       </div>
       <div>
-        <div className="w-full flex flex-col">
+        <div className="w-full flex flex-col px-4 pb-2">
           {(() => {
             // Find the latest assistant message
             const latestAssistantMsg = [...messages]
@@ -274,7 +274,7 @@ export function Chat({
               </div>
             );
           })()}
-          <div className="px-4 pb-2">
+          <div>
             <Input
               value={input}
               onChange={setInput}
@@ -297,7 +297,7 @@ export function Chat({
                   : ""
               }
             />
-            <div className="mt-2 text-xs text-zinc-500 text-center">
+            <div className="mt-2 text-xs text-gray-400 text-center">
               You can attach images or PDF files to provide more context for
               your request.
             </div>

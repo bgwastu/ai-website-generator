@@ -1,10 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { UploadIcon, Trash2Icon, FileIcon } from "lucide-react";
+import { UploadIcon, Trash2Icon, ImageIcon, AlertCircle, CheckCircle2, ExternalLinkIcon, Loader, FileIcon } from "lucide-react";
 import { Asset } from '@/lib/query';
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface ImageUploadProps {
   projectId: string;
@@ -15,7 +24,18 @@ export interface ImageUploadProps {
 const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, assets }) => {
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [deletingFile, setDeletingFile] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{url: string, filename: string} | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+
+  // Sort assets by uploadedAt (newest first)
+  const sortedAssets = [...assets].sort((a, b) => {
+    // Sort by timestamp in id (newer assets have higher timestamps)
+    const aTimestamp = a.id.split('-')[0];
+    const bTimestamp = b.id.split('-')[0];
+    return bTimestamp.localeCompare(aTimestamp);
+  });
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -33,6 +53,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("File uploaded successfully");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to upload file. Please try again.");
@@ -57,6 +78,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      toast.success("File deleted successfully");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to delete file. Please try again.");
@@ -78,82 +100,221 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ projectId, deployedUrl, asset
     deleteMutation.mutate(assetId);
   };
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setIsUploadingFile(true);
+      uploadMutation.mutate(e.dataTransfer.files[0]);
+    }
+  };
+
+  const isImage = (filename: string) => {
+    const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    return extensions.some(ext => filename.toLowerCase().endsWith(ext));
+  };
+
   return (
-    <div className="bg-zinc-50 px-3 py-2 border-b border-zinc-200 flex flex-col gap-2 flex-1 min-h-0">
-      {assets.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center h-full min-h-[200px]">
-          <label className="flex flex-col items-center gap-2 cursor-pointer">
-            <input
-              type="file"
-              className="hidden"
-              onChange={handleUploadFile}
-              disabled={isUploadingFile}
-              accept="image/*"
-            />
-            <span className={`px-4 py-2 rounded text-base bg-blue-500 text-white flex items-center gap-2 shadow-md ${isUploadingFile ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-600"}`}>
-              <UploadIcon size={20} /> {isUploadingFile ? "Uploading..." : "Upload file"}
-            </span>
-            <span className="text-zinc-400 text-xs mt-2">No files found. Upload a file to get started.</span>
-          </label>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-medium text-zinc-700 text-sm">Files</span>
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleUploadFile}
-                disabled={isUploadingFile}
-                accept="image/*"
-              />
-              <span className={`px-2 py-1 rounded text-xs bg-blue-500 text-white flex items-center gap-1 ${isUploadingFile ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-600"}`}>
-                <UploadIcon size={14} /> {isUploadingFile ? "Uploading..." : "Upload file"}
+    <>
+      <div className="flex flex-col h-full bg-white" ref={containerRef}>
+        {/* Header with upload button - updated to match website-preview.tsx */}
+        <div className="bg-zinc-100 border-b border-zinc-200">
+          <div className="flex h-9 items-center px-2 gap-2">
+            <div className="flex items-center">
+              <span className="text-xs font-medium text-zinc-700 px-2">
+                Your Images
               </span>
-            </label>
+            </div>
+            
+            {/* Spacer */}
+            <div className="flex-1"></div>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <label className={cn("cursor-pointer", isUploadingFile && "opacity-50 cursor-not-allowed")}>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadFile}
+                  disabled={isUploadingFile}
+                  accept="image/*"
+                />
+                <span className="inline-flex items-center gap-1 h-7 text-xs px-2 rounded border border-zinc-200 bg-white hover:bg-zinc-50 font-medium text-zinc-700">
+                  {isUploadingFile ? (
+                    <>
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadIcon size={14} />
+                      <span>Upload</span>
+                    </>
+                  )}
+                </span>
+              </label>
+            </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "100%" }}>
-            <ul className="divide-y divide-zinc-200">
-              {assets.map((asset) => {
-                const fileUrl = asset.url || (deployedUrl ? `${deployedUrl}/${asset.filename}` : undefined);
-                const isDeleting = deletingFile === asset.id;
-                return (
-                  <li key={asset.id} className={`flex items-center justify-between py-2 transition-opacity ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}>
-                    <div className="flex items-center gap-2">
-                      <FileIcon size={14} className="text-zinc-400" />
-                      {fileUrl ? (
-                        <a
-                          href={fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-zinc-700 hover:underline text-xs"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {asset.filename}
-                        </a>
-                      ) : (
-                        <span className="text-zinc-400 text-xs cursor-not-allowed">{asset.filename}</span>
+        </div>
+
+        {/* Content area with upload overlay when needed */}
+        <div 
+          className="flex-1 overflow-hidden relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drag overlay - improved version */}
+          {dragActive && (
+            <div className="absolute inset-0 bg-zinc-100/90 border-2 border-dashed border-zinc-400 z-20 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-zinc-700">
+                <UploadIcon size={18} className="text-zinc-600" />
+                <p className="text-sm font-medium">Release to upload</p>
+              </div>
+            </div>
+          )}
+
+          {sortedAssets.length === 0 ? (
+            // Empty state
+            <div className="flex flex-col items-center justify-center h-full p-8 border-2 border-dashed border-zinc-200 m-4 rounded-lg transition-colors">
+              <div className="bg-zinc-100 p-4 rounded-full mb-4">
+                <ImageIcon size={32} className="text-zinc-400" />
+              </div>
+              <h3 className="text-zinc-800 font-medium mb-2">No images uploaded yet</h3>
+              <p className="text-zinc-500 text-center text-sm mb-4 max-w-md">
+                Upload images to use in your website. Drag and drop an image here or click the upload button.
+              </p>
+              <label className={cn("cursor-pointer", isUploadingFile && "cursor-not-allowed")}>
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadFile}
+                  disabled={isUploadingFile}
+                  accept="image/*"
+                />
+                <span className={cn(
+                  "inline-flex items-center gap-2 bg-zinc-800 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                  isUploadingFile ? "opacity-50" : "hover:bg-zinc-700"
+                )}>
+                  {isUploadingFile ? (
+                    <>
+                      <Loader size={16} className="animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadIcon size={16} />
+                      <span>Select Image</span>
+                    </>
+                  )}
+                </span>
+              </label>
+            </div>
+          ) : (
+            // File list
+            <div className={cn(
+              "p-2 overflow-y-auto h-full",
+              isUploadingFile && "opacity-70 pointer-events-none"
+            )}>
+              <div className="border rounded-md divide-y divide-zinc-100">
+                {isUploadingFile && (
+                  <div className="py-2 px-3 flex items-center gap-2 bg-zinc-50">
+                    <Loader size={14} className="animate-spin text-zinc-600" />
+                    <span className="text-sm text-zinc-700">Uploading image...</span>
+                  </div>
+                )}
+                {sortedAssets.map((asset) => {
+                  const fileUrl = asset.url || (deployedUrl ? `${deployedUrl}/${asset.filename}` : undefined);
+                  const isDeleting = deletingFile === asset.id;
+                  const imageFile = isImage(asset.filename);
+                  
+                  return (
+                    <div 
+                      key={asset.id} 
+                      className={cn(
+                        "group relative flex items-center justify-between py-2 px-3 hover:bg-zinc-50 transition-colors",
+                        isDeleting ? "opacity-50 pointer-events-none" : "",
+                        imageFile && fileUrl ? "cursor-pointer" : ""
                       )}
-                    </div>
-                    <button
-                      className="px-2 py-0.5 rounded text-xs bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                       onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFile(asset.id);
+                        // Only trigger for the row itself, not for action buttons
+                        if (imageFile && fileUrl && !e.defaultPrevented) {
+                          setSelectedImage({
+                            url: fileUrl,
+                            filename: asset.filename
+                          });
+                        }
                       }}
-                      disabled={isDeleting}
                     >
-                      {isDeleting ? (<><Trash2Icon size={12} /> Deleting...</>) : (<><Trash2Icon size={12} /> Delete</>)}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </>
-      )}
-    </div>
+                      {/* File info */}
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="flex-shrink-0 w-5 h-5 text-zinc-400">
+                          <FileIcon size={20} />
+                        </div>
+                        <span className="text-sm text-zinc-700 truncate">
+                          {asset.filename}
+                        </span>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1 ml-2">
+                        <button
+                          className={cn(
+                            "p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded",
+                            isDeleting && "opacity-50"
+                          )}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteFile(asset.id);
+                          }}
+                          disabled={isDeleting}
+                          title="Delete file"
+                        >
+                          <Trash2Icon size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Image preview dialog */}
+      <Dialog open={!!selectedImage} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="pr-10">{selectedImage?.filename}</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="relative w-full aspect-auto max-h-[70vh] overflow-hidden rounded-md border border-zinc-200">
+              <Image
+                src={selectedImage.url}
+                alt={selectedImage.filename}
+                className="object-contain w-full h-full"
+                width={800}
+                height={600}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
