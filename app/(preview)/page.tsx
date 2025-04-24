@@ -6,44 +6,41 @@ import LandingPage from "@/components/landing-page";
 import PreviewPane from "@/components/preview-pane";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, GlobeIcon, XIcon } from "lucide-react";
+import { ChevronLeft, GlobeIcon, Loader, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+// Check if website generation is in progress from messages
 function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
-  if (!messages || messages.length === 0) return false;
+  if (!messages?.length) return false;
 
-  // Check if ANY assistant message has an active 'createWebsite' or 'updateWebsite' tool call
   return messages.some((m) => {
     if (m.role !== "assistant" || !m.parts) return false;
 
-    return m.parts.some((part: any) => {
-      return (
-        part.type === "tool-invocation" &&
-        (part.toolInvocation.toolName === "createWebsite" ||
-          part.toolInvocation.toolName === "updateWebsite") &&
-        part.toolInvocation.state !== "result"
-      );
-    });
+    return m.parts.some((part: any) => 
+      part.type === "tool-invocation" && 
+      ["createWebsite", "updateWebsite"].includes(part.toolInvocation.toolName) && 
+      part.toolInvocation.state !== "result"
+    );
   });
 }
 
 export default function Home() {
   const queryClient = useQueryClient();
-  const [projectId, setProjectId] = useQueryState("id", {
-    history: "push",
-  });
+  const [projectId, setProjectId] = useQueryState("id", { history: "push" });
   const [landingInput, setLandingInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // State to store the pending message when projectId is not available yet
+  const [showPreviewPane, setShowPreviewPane] = useState(false);
+  
+  // Pending message state for when projectId isn't available yet
   const [pendingMessage, setPendingMessage] = useState<{
     content: string;
     attachments: AttachmentPreview[];
   } | null>(null);
 
+  // Fetch project data
   const {
     data: project,
     isLoading: projectLoading,
@@ -53,8 +50,9 @@ export default function Home() {
     queryFn: async () => {
       if (!projectId) return null;
       const res = await fetch(`/api/project/${projectId}`);
-      if (!res.ok)
+      if (!res.ok) {
         throw new Error((await res.json()).error || "Failed to fetch project");
+      }
       return res.json();
     },
     enabled: !!projectId,
@@ -64,6 +62,7 @@ export default function Home() {
   const htmlVersions = project?.htmlVersions || [];
   const deployedUrl = project?.domain ? `https://${project.domain}` : null;
 
+  // Handle website deployment
   const deployMutation = useMutation({
     mutationFn: async ({ versionIndex }: { versionIndex: number }) => {
       if (!projectId) throw new Error("No projectId");
@@ -73,8 +72,9 @@ export default function Home() {
         body: JSON.stringify({ versionIndex }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success)
+      if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to deploy");
+      }
       return data;
     },
     onSuccess: (data) => {
@@ -101,11 +101,9 @@ export default function Home() {
     },
   });
 
+  // Chat setup
   const {
     messages,
-    input: chatInput,
-    setInput: setChatInput,
-    handleSubmit,
     append,
     status,
     error: chatError,
@@ -135,20 +133,18 @@ export default function Home() {
     if (!value.trim() && attachments.length === 0) return;
     setLoading(true);
     setError(null);
+    
     try {
       // Create new project
       const projectRes = await fetch("/api/project", { method: "POST" });
       const { id } = await projectRes.json();
 
-      // Save the message to send after projectId is set and useChat is initialized
-      setPendingMessage({
-        content: value,
-        attachments: attachments,
-      });
+      // Save pending message
+      setPendingMessage({ content: value, attachments });
 
       // Set projectId, which will trigger useChat initialization
       setProjectId(id);
-      setLandingInput(""); // Clear landing input after saving the pending message
+      setLandingInput(""); 
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -156,13 +152,10 @@ export default function Home() {
     }
   };
 
-  const [showPreviewPane, setShowPreviewPane] = useState(false);
-
   // Set initial messages if available
   useEffect(() => {
     if (
-      project?.messages &&
-      project.messages.length > 0 &&
+      project?.messages?.length > 0 &&
       status !== "streaming" &&
       status !== "submitted"
     ) {
@@ -174,13 +167,8 @@ export default function Home() {
   useEffect(() => {
     if (projectId && pendingMessage) {
       append(
-        {
-          role: "user",
-          content: pendingMessage.content,
-        },
-        {
-          experimental_attachments: pendingMessage.attachments,
-        }
+        { role: "user", content: pendingMessage.content },
+        { experimental_attachments: pendingMessage.attachments }
       );
       setPendingMessage(null);
     }
@@ -190,7 +178,8 @@ export default function Home() {
     () => isPreviewLoadingFromMessages(messages),
     [messages]
   );
-  // Landing page if no projectId
+
+  // Render landing page if no projectId
   if (!projectId) {
     return (
       <LandingPage
@@ -203,17 +192,21 @@ export default function Home() {
     );
   }
 
+  // Render loading state
   if (projectLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="text-lg text-gray-700">Loading project...</div>
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b from-white to-blue-50">
+        <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
+        <div className="text-lg font-medium text-gray-700">Loading your project...</div>
       </div>
     );
   }
+
+  // Render error state
   if (projectError) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="text-lg text-red-600">{projectError.message}</div>
+      <div className="flex flex-col items-center justify-center h-screen bg-red-50">
+        <div className="text-lg font-medium text-red-600 max-w-md text-center mx-auto">{projectError.message}</div>
       </div>
     );
   }
@@ -223,34 +216,33 @@ export default function Home() {
       {/* Floating toggle button for mobile */}
       {!showPreviewPane && (
         <button
-          className="fixed z-40 top-4 right-6 lg:hidden bg-white text-blue-700 border border-blue-700 rounded-md px-3 py-1 flex items-center gap-1 shadow focus:outline-none text-sm"
+          className="fixed z-40 top-4 right-4 lg:hidden bg-white text-blue-700 border border-blue-700 rounded-md px-2.5 py-1 flex items-center gap-1 shadow-sm focus:outline-none text-xs font-medium"
           onClick={() => setShowPreviewPane(true)}
           aria-label="Show Preview Pane"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={16} />
           <span>Preview</span>
         </button>
       )}
+
       {/* Mobile Preview Pane Drawer */}
       {showPreviewPane && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowPreviewPane(false)}
+          <div 
+            className="absolute inset-0 bg-black/40" 
+            onClick={() => setShowPreviewPane(false)} 
           />
           <div className="relative ml-auto w-full max-w-md h-full bg-white shadow-xl flex flex-col">
-            {/* Header moved here */}
-            <div className="flex items-center gap-2 px-4 pt-4 pb-2 bg-white border-b border-zinc-100">
-              <GlobeIcon size={18} className="text-blue-500" />
-              <span className="text-sm font-medium text-zinc-700">
-                Website Builder
-              </span>
+            {/* Compact mobile header */}
+            <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-zinc-100">
+              <GlobeIcon size={16} className="text-blue-500" />
+              <span className="text-xs font-medium text-zinc-700">Website Preview</span>
               <button
                 className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"
                 onClick={() => setShowPreviewPane(false)}
                 aria-label="Close Preview Pane"
               >
-                <XIcon className="w-5 h-5 text-zinc-800" />
+                <XIcon className="w-4 h-4 text-zinc-800" />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -271,19 +263,16 @@ export default function Home() {
           </div>
         </div>
       )}
+
       <div className="flex flex-col lg:flex-row h-screen">
+        {/* Chat section */}
         <div className="flex-1 w-full h-full lg:max-w-[600px] flex flex-col">
           <Chat
             messages={messages}
             handleSend={(value, attachments) =>
               append(
-                {
-                  role: "user",
-                  content: value,
-                },
-                {
-                  experimental_attachments: attachments,
-                }
+                { role: "user", content: value },
+                { experimental_attachments: attachments }
               )
             }
             status={status}
@@ -291,6 +280,7 @@ export default function Home() {
             reload={reload}
           />
         </div>
+
         {/* Desktop Preview Pane */}
         <div className="hidden lg:flex flex-1 flex-col h-full">
           <div className="h-full flex-1 flex flex-col">
