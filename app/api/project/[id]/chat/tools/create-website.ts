@@ -102,6 +102,7 @@ Create a beautiful, accessible, responsive single-page website using vanilla Jav
 - Ensure fully responsive layout using Tailwind's responsive modifiers (sm:, md:, lg:, xl:)
 - Add HTML comments for major sections
 - IMPORTANT: NEVER make up URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context.
+- IMPORTANT: Do NOT use SVG icons or create any SVG elements. For all icons, use only Font Awesome icons or emojis. Do not generate or embed any SVG code, and do not use inline SVG. If an icon is needed, use a Font Awesome icon (with <i> tag) or a relevant emoji instead.
 </REQUIREMENTS>
 
 <TABLE_GENERATION_GUIDELINES>

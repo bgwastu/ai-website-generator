@@ -268,6 +268,7 @@ Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript
 - DO NOT create custom canvas or SVG elements unless they're from external modules
 - Only use Grid.js for tables with moderate to large datasets
 - IMPORTANT: NEVER make up URLs, API endpoints, or asset paths. Only use assets or URLs that are specifically provided in the context.
+- IMPORTANT: Do NOT use SVG icons or create any SVG elements. For all icons, use only Font Awesome icons or emojis. Do not generate or embed any SVG code, and do not use inline SVG. If an icon is needed, use a Font Awesome icon (with <i> tag) or a relevant emoji instead.
 </UPDATE_REQUIREMENTS>
 
 <TABLE_GENERATION_GUIDELINES>
