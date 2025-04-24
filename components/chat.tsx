@@ -7,7 +7,7 @@ import {
   BotIcon,
   Loader,
   RotateCcw,
-  UserIcon
+  UserIcon,
 } from "lucide-react";
 import Image from "next/image";
 import React from "react";
@@ -177,29 +177,34 @@ export function Chat({
   const [containerRef, endRef] = useScrollToBottom<HTMLDivElement>();
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      <div
-        ref={containerRef}
-        className="flex flex-col flex-1 items-center overflow-y-auto px-4 py-8 gap-12"
-      >
-        {messages.length === 0 && (
-          <div className="h-[350px] w-full md:w-[500px] pt-20">
-            <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">
-              <div className="flex flex-col justify-center gap-4 items-center text-zinc-900">
-                <p className="text-lg font-bold">AI Website Generator</p>
-                <p className="text-center">
-                  Start by describing the website you want to build, or try one
-                  of the suggestions below.
-                </p>
+      <div className="relative flex-1 overflow-hidden">
+        <div
+          ref={containerRef}
+          className="flex flex-col items-center overflow-y-auto px-4 py-8 gap-12 h-full"
+        >
+          {messages.length === 0 && (
+            <div className="h-[350px] w-full md:w-[500px] pt-20">
+              <div className="border rounded-lg p-6 flex flex-col gap-4 text-zinc-500 text-sm border-zinc-200">
+                <div className="flex flex-col justify-center gap-4 items-center text-zinc-900">
+                  <p className="text-lg font-bold">AI Website Generator</p>
+                  <p className="text-center">
+                    Start by describing the website you want to build, or try
+                    one of the suggestions below.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          {messages.map((m: any) => (
+            <div key={m.id} className="flex flex-col w-full mx-auto">
+              <Message message={m} />
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
+        {messages.length > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
         )}
-        {messages.map((m: any) => (
-          <div key={m.id} className="flex flex-col w-full mx-auto">
-            <Message message={m} />
-          </div>
-        ))}
-        <div ref={endRef} />
       </div>
       <div>
         <div className="w-full flex flex-col">
@@ -269,28 +274,34 @@ export function Chat({
               </div>
             );
           })()}
-          <Input
-            value={input}
-            onChange={setInput}
-            onSend={handleLocalSend}
-            loading={
-              status === "streaming" ||
-              status === "submitted" ||
-              status === "tooling"
-            }
-            disabled={
-              status === "streaming" ||
-              status === "submitted" ||
-              status === "tooling"
-            }
-            className={
-              status === "submitted" ||
-              status === "streaming" ||
-              status === "tooling"
-                ? "rounded-t-none"
-                : ""
-            }
-          />
+          <div className="px-4 pb-2">
+            <Input
+              value={input}
+              onChange={setInput}
+              onSend={handleLocalSend}
+              loading={
+                status === "streaming" ||
+                status === "submitted" ||
+                status === "tooling"
+              }
+              disabled={
+                status === "streaming" ||
+                status === "submitted" ||
+                status === "tooling"
+              }
+              className={
+                status === "submitted" ||
+                status === "streaming" ||
+                status === "tooling"
+                  ? "rounded-t-none"
+                  : ""
+              }
+            />
+            <div className="mt-2 text-xs text-zinc-500 text-center">
+              You can attach images or PDF files to provide more context for
+              your request.
+            </div>
+          </div>
         </div>
       </div>
     </div>

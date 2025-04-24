@@ -5,9 +5,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
-  Globe,
   Layout,
   Loader,
+  RefreshCw,
   UploadIcon
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -83,95 +83,103 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   const hasNextVersion = currentVersionIndex < htmlVersions.length - 1;
   const isDeployed = deployedVersionIndex === currentVersionIndex;
 
-  // Function to open preview in a new tab
-  const openFullPreview = () => {
-    if (!htmlContent) return;
-    
-    // Create a new blob from the HTML content
-    const blob = new Blob([safeHtmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    // Open in a new tab
-    window.open(url, '_blank');
-    
-    // Clean up the URL object after a delay
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // Function to refresh only the iframe
+  const refreshIframe = () => {
+    if (iframeRef.current) {
+      iframeRef.current.src = 'about:blank';
+      setTimeout(() => {
+        if (iframeRef.current) {
+          iframeRef.current.src = '';
+          iframeRef.current.srcdoc = safeHtmlContent;
+        }
+      }, 50);
+    }
   };
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {htmlContent && (
-        <div className="bg-white border-b border-zinc-200 shadow-sm">
-          <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-2">
-            {/* Version Controls Group */}
-            <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
-              <div className="bg-zinc-100 p-1 rounded-md flex items-center">
-                <Button
-                  onClick={goToPreviousVersion}
-                  disabled={!hasPreviousVersion}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 rounded-sm"
-                  title="Previous version"
-                >
-                  <ChevronLeftIcon size={16} />
-                </Button>
-                <div className="flex items-center px-2">
-                  <span className="text-xs font-medium text-zinc-700">
-                    Version {versionNumber}
-                  </span>
-                </div>
-                <Button
-                  onClick={goToNextVersion}
-                  disabled={!hasNextVersion}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0 rounded-sm"
-                  title="Next version"
-                >
-                  <ChevronRightIcon size={16} />
-                </Button>
-              </div>
-              
+      <div className="bg-zinc-100 border-b border-zinc-200">
+        <div className="flex h-9 items-center px-2 gap-2">
+          {/* Version Navigation */}
+          <div className="flex items-center">
+            <Button
+              onClick={goToPreviousVersion}
+              disabled={!hasPreviousVersion}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+              title="Previous version"
+            >
+              <ChevronLeftIcon size={16} />
+            </Button>
+            
+            <div className="flex items-center px-2">
+              <span className="text-xs font-medium text-zinc-700">
+                Version {versionNumber}
+              </span>
               {isDeployed && (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 h-8 ml-2 sm:ml-3">
-                  <Globe size={12} className="mr-1" />
-                  Deployed
+                <Badge variant="outline" className="ml-2 h-5 bg-green-50 text-green-700 border-green-200 text-[10px] font-medium">
+                  Live
                 </Badge>
               )}
             </div>
             
-            {/* Action Buttons Group */}
-            <div className="flex flex-row flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
-              {isDeployed && deployedUrl ? (
-                <Button 
-                  asChild 
-                  variant="outline" 
-                  size="sm" 
-                  className="h-8 text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 w-full sm:w-auto"
-                >
-                  <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLinkIcon size={14} className="mr-1.5" /> 
-                    View live site
-                  </a>
-                </Button>
-              ) : !isDeployed && htmlContent ? (
-                <Button
-                  onClick={() => onDeploy(htmlContent, currentVersionIndex)}
-                  disabled={isUploading}
-                  variant="outline"
-                  size="sm"
-                  className={`h-8 text-xs w-full sm:w-auto ${isUploading ? 'bg-zinc-100' : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800'}`}
-                >
-                  <UploadIcon size={14} className="mr-1.5" />
-                  {isUploading ? "Deploying..." : "Deploy version"}
-                </Button>
-              ) : null}
-            </div>
+            <Button
+              onClick={goToNextVersion}
+              disabled={!hasNextVersion}
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+              title="Next version"
+            >
+              <ChevronRightIcon size={16} />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+              onClick={refreshIframe}
+              title="Refresh preview"
+            >
+              <RefreshCw size={14} />
+            </Button>
+          </div>
+          
+          {/* Spacer */}
+          <div className="flex-1"></div>
+          
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {isDeployed && deployedUrl ? (
+              <Button 
+                asChild 
+                variant="outline" 
+                size="sm"
+                className="h-7 text-xs px-2 flex items-center gap-1"
+              >
+                <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLinkIcon size={14} />
+                  <span>View site</span>
+                </a>
+              </Button>
+            ) : !isDeployed && htmlContent ? (
+              <Button
+                onClick={() => onDeploy(htmlContent, currentVersionIndex)}
+                disabled={isUploading}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs px-2 flex items-center gap-1"
+              >
+                <UploadIcon size={14} />
+                <span>{isUploading ? "Deploying..." : "Deploy"}</span>
+              </Button>
+            ) : null}
           </div>
         </div>
-      )}
-      <div className="flex-grow overflow-auto relative min-h-0">
+      </div>
+      
+      <div className="flex-grow overflow-auto relative min-h-0 bg-white">
         {htmlContent ? (
           <iframe
             ref={iframeRef}
