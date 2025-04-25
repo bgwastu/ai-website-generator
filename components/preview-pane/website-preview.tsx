@@ -2,25 +2,25 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ExternalLinkIcon,
-  Layout,
-  Loader,
-  RefreshCw,
-  UploadIcon,
-  Smartphone,
-  Monitor,
-} from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
-import { Badge } from "../ui/badge";
-import { cn } from "@/lib/utils";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ExternalLinkIcon,
+  Layout,
+  Loader,
+  Monitor,
+  RefreshCw,
+  Smartphone,
+  UploadIcon,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Badge } from "../ui/badge";
 
 // Mobile device dimensions
 const MOBILE_WIDTH = 375;
@@ -56,6 +56,9 @@ export interface WebsitePreviewProps {
   isUploading: boolean;
   isPreviewLoading: boolean;
   deployedUrl: string | null;
+  currentVersionIndex?: number;
+  onVersionChange?: (versionIndex: number) => void;
+  onViewCode?: () => void;
 }
 
 const WebsitePreview: React.FC<WebsitePreviewProps> = ({
@@ -65,20 +68,43 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   isUploading,
   isPreviewLoading,
   deployedUrl,
+  currentVersionIndex: propVersionIndex,
+  onVersionChange,
+  onViewCode,
 }) => {
-  const [currentVersionIndex, setCurrentVersionIndex] = useState(
-    htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
+  const [localVersionIndex, setLocalVersionIndex] = useState(
+    propVersionIndex !== undefined
+      ? propVersionIndex
+      : htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
   );
   const [isMobileView, setIsMobileView] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Use either controlled version index from props or local state
+  const currentVersionIndex = 
+    propVersionIndex !== undefined ? propVersionIndex : localVersionIndex;
+
+  useEffect(() => {
+    if (propVersionIndex !== undefined) {
+      setLocalVersionIndex(propVersionIndex);
+    }
+  }, [propVersionIndex]);
+
   useEffect(() => {
     if (htmlVersions.length === 0) {
-      setCurrentVersionIndex(0);
-    } else {
-      setCurrentVersionIndex(htmlVersions.length - 1);
+      if (onVersionChange) {
+        onVersionChange(0);
+      } else {
+        setLocalVersionIndex(0);
+      }
+    } else if (propVersionIndex === undefined && currentVersionIndex >= htmlVersions.length) {
+      if (onVersionChange) {
+        onVersionChange(htmlVersions.length - 1);
+      } else {
+        setLocalVersionIndex(htmlVersions.length - 1);
+      }
     }
-  }, [htmlVersions.length]);
+  }, [htmlVersions.length, currentVersionIndex, propVersionIndex, onVersionChange]);
 
   const htmlContent = htmlVersions[currentVersionIndex] || "";
   const safeHtmlContent = injectLinkHandler(htmlContent);
@@ -89,13 +115,24 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   const hasVersions = htmlVersions.length > 0;
 
   const goToPreviousVersion = () => {
-    setCurrentVersionIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    const newIndex = currentVersionIndex > 0 ? currentVersionIndex - 1 : currentVersionIndex;
+    if (onVersionChange) {
+      onVersionChange(newIndex);
+    } else {
+      setLocalVersionIndex(newIndex);
+    }
   };
   
   const goToNextVersion = () => {
-    setCurrentVersionIndex((prev) =>
-      prev < htmlVersions.length - 1 ? prev + 1 : prev
-    );
+    const newIndex = 
+      currentVersionIndex < htmlVersions.length - 1 
+        ? currentVersionIndex + 1 
+        : currentVersionIndex;
+    if (onVersionChange) {
+      onVersionChange(newIndex);
+    } else {
+      setLocalVersionIndex(newIndex);
+    }
   };
 
   const toggleViewMode = () => {

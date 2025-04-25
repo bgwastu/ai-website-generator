@@ -2,12 +2,16 @@
 
 import { Asset } from "@/lib/query";
 import { cn } from "@/lib/utils";
-import { Image as ImageIcon, MonitorSmartphone } from "lucide-react";
-import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Code, Image as ImageIcon, MonitorSmartphone } from "lucide-react";
+import { useQueryState } from "nuqs";
+import React, { useCallback, useState } from "react";
+import { toast } from "sonner";
+import EditCode from "./edit-code";
 import ImageUpload from "./image-upload";
 import WebsitePreview from "./website-preview";
 
-type TabType = "version" | "files";
+type TabType = "version" | "files" | "code";
 
 export interface PreviewPaneProps {
   htmlVersions: string[];
@@ -33,9 +37,27 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
   assets,
   className,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>("version");
+  const queryClient = useQueryClient();
+  // Use query state for tab since it needs to be preserved in URL
+  const [activeTab, setActiveTab] = useQueryState("tab", { defaultValue: "version" as TabType });
+  
+  // Local state for the current version, shared between preview and editor
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(
+    htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
+  );
+  
+  // Local state for saving status (just for this component, not for URL)
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Local state for HTML content (to avoid unnecessary re-renders when using real API)
+  const [localHtmlVersions, setLocalHtmlVersions] = useState<string[]>(htmlVersions);
 
-  const renderTabButton = (tab: TabType, icon: React.ReactNode, label: string) => (
+  // Update local HTML versions when prop changes
+  React.useEffect(() => {
+    setLocalHtmlVersions(htmlVersions);
+  }, [htmlVersions]);
+
+  const renderTabButton = useCallback((tab: TabType, icon: React.ReactNode, label: string) => (
     <button
       onClick={() => setActiveTab(tab)}
       className={cn(
@@ -49,7 +71,75 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
       {icon}
       <span>{label}</span>
     </button>
-  );
+  ), [activeTab, setActiveTab]);
+
+  const handleSaveCode = useCallback(async (html: string, versionIndex: number): Promise<boolean> => {
+    if (!projectId) return false;
+    try {
+      setIsSaving(true);
+      const response = await fetch(`/api/project/${projectId}/html`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          html,
+          versionIndex,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to save HTML');
+      }
+      // Update local version of htmlVersions so the preview will show changes
+      const updatedVersions = [...localHtmlVersions];
+      updatedVersions[versionIndex] = html;
+      setLocalHtmlVersions(updatedVersions);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      // If the saved version is the deployed version, also call deploy API
+      if (deployedVersionIndex === versionIndex) {
+        const deployRes = await fetch(`/api/project/${projectId}/deploy`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ versionIndex }),
+        });
+        const deployData = await deployRes.json();
+        if (!deployRes.ok || !deployData.success) {
+          toast.error(deployData.message || 'Failed to deploy updated HTML');
+          return false;
+        }
+        toast.success('Code saved and deployed successfully');
+      } else {
+        toast.success('Code saved successfully');
+      }
+      return true;
+    } catch (error) {
+      console.error('Error saving code:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save code');
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [projectId, localHtmlVersions, deployedVersionIndex, queryClient]);
+
+  const handleDeploy = useCallback(async (html: string, versionIndex: number) => {
+    // First make sure the HTML is saved
+    if (versionIndex !== currentVersionIndex || html !== localHtmlVersions[versionIndex]) {
+      const saveSuccess = await handleSaveCode(html, versionIndex);
+      if (!saveSuccess) {
+        toast.error('Failed to save before deploying');
+        return;
+      }
+    }
+    
+    // Then deploy it using the parent-provided deploy function
+    onDeploy(html, versionIndex);
+  }, [currentVersionIndex, localHtmlVersions, handleSaveCode, onDeploy]);
+
+  const handleVersionChange = useCallback((index: number) => {
+    setCurrentVersionIndex(index);
+  }, []);
 
   return (
     <div className={cn(
@@ -65,6 +155,11 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
               "Preview"
             )}
             {renderTabButton(
+              "code", 
+              <Code size={16} className="mr-1.5" />, 
+              "Code"
+            )}
+            {renderTabButton(
               "files", 
               <ImageIcon size={16} className="mr-1.5" />, 
               "Your Images"
@@ -76,12 +171,26 @@ const PreviewPane: React.FC<PreviewPaneProps> = ({
       <div className="flex-1 min-h-0 overflow-auto rounded-b-lg">
         {activeTab === "version" ? (
           <WebsitePreview
-            htmlVersions={htmlVersions}
+            htmlVersions={localHtmlVersions}
             deployedVersionIndex={deployedVersionIndex}
-            onDeploy={onDeploy}
+            onDeploy={handleDeploy}
             deployedUrl={deployedUrl}
             isUploading={isUploading}
             isPreviewLoading={isPreviewLoading}
+            currentVersionIndex={currentVersionIndex}
+            onVersionChange={handleVersionChange}
+            onViewCode={() => setActiveTab("code")}
+          />
+        ) : activeTab === "code" ? (
+          <EditCode
+            htmlVersions={localHtmlVersions}
+            deployedVersionIndex={deployedVersionIndex}
+            onSave={handleSaveCode}
+            isUploading={isSaving}
+            deployedUrl={deployedUrl}
+            currentVersionIndex={currentVersionIndex}
+            onVersionChange={handleVersionChange}
+            onDeploy={handleDeploy}
           />
         ) : (
           <ImageUpload
