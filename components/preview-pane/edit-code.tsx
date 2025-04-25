@@ -27,58 +27,40 @@ export interface EditCodeProps {
   onViewPreview?: () => void;
   isUploading: boolean;
   deployedUrl: string | null;
-  currentVersionIndex?: number;
-  onVersionChange?: (versionIndex: number) => void;
   onDeploy?: (html: string, versionIndex: number) => void;
+  currentVersion: number;
+  onNextVersion: () => void;
+  onPrevVersion: () => void;
 }
 
 const EditCode: React.FC<EditCodeProps> = ({
   htmlVersions,
   deployedVersionIndex,
   onSave,
-  onViewPreview,
   isUploading,
-  deployedUrl,
-  currentVersionIndex: propVersionIndex,
-  onVersionChange,
   onDeploy,
+  currentVersion,
+  onNextVersion,
+  onPrevVersion,
 }) => {
-  const [localVersionIndex, setLocalVersionIndex] = useState(
-    propVersionIndex !== undefined
-      ? propVersionIndex
-      : htmlVersions.length > 0
-      ? htmlVersions.length - 1
-      : 0
-  );
   const [code, setCode] = useState("");
   const [isEdited, setIsEdited] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isCodeLoaded, setIsCodeLoaded] = useState(false);
   const [editorInstance, setEditorInstance] = useState<any>(null);
 
-  // Use either controlled version index from props or local state
-  const currentVersionIndex =
-    propVersionIndex !== undefined ? propVersionIndex : localVersionIndex;
-
-  // Update version index when prop changes
-  useEffect(() => {
-    if (propVersionIndex !== undefined) {
-      setLocalVersionIndex(propVersionIndex);
-    }
-  }, [propVersionIndex]);
-
   // Update code when version changes or htmlVersions changes
   useEffect(() => {
-    if (htmlVersions.length > 0 && currentVersionIndex < htmlVersions.length) {
+    if (htmlVersions.length > 0 && currentVersion < htmlVersions.length) {
       // Always set code, even if it's an empty string
-      const htmlContent = htmlVersions[currentVersionIndex] || "";
+      const htmlContent = htmlVersions[currentVersion] || "";
       setCode(htmlContent);
       setIsEdited(false);
       setIsCodeLoaded(true);
     } else {
       setIsCodeLoaded(false);
     }
-  }, [currentVersionIndex, htmlVersions]);
+  }, [currentVersion, htmlVersions]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -97,28 +79,25 @@ const EditCode: React.FC<EditCodeProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdited, isUploading, code, currentVersionIndex]);
+  }, [isEdited, isUploading, code, currentVersion]);
 
-  const versionNumber = currentVersionIndex + 1;
-  const hasPreviousVersion = currentVersionIndex > 0;
-  const hasNextVersion = currentVersionIndex < htmlVersions.length - 1;
-  const isDeployed = deployedVersionIndex === currentVersionIndex;
+  const versionNumber = currentVersion + 1;
+  const hasPreviousVersion = currentVersion > 0;
+  const hasNextVersion = currentVersion < htmlVersions.length - 1;
+  const isDeployed = deployedVersionIndex === currentVersion;
   const hasVersions = htmlVersions.length > 0;
 
   const handleCodeChange = (value: string | undefined) => {
     if (value !== undefined) {
       setCode(value);
-      const currentHtml = htmlVersions[currentVersionIndex] || "";
+      const currentHtml = htmlVersions[currentVersion] || "";
       setIsEdited(value !== currentHtml);
     }
   };
 
   const handleSave = async () => {
-    const result = await onSave(code, currentVersionIndex);
+    const result = await onSave(code, currentVersion);
     if (result !== false) {
-      // Update the local copy of the html so isEdited will be false
-      const updatedHtmlVersions = [...htmlVersions];
-      updatedHtmlVersions[currentVersionIndex] = code;
       setIsEdited(false);
     }
   };
@@ -131,7 +110,7 @@ const EditCode: React.FC<EditCodeProps> = ({
 
       // Save first if there are unsaved changes
       if (isEdited) {
-        const saveResult = await onSave(code, currentVersionIndex);
+        const saveResult = await onSave(code, currentVersion);
         if (saveResult === false) {
           throw new Error("Failed to save before deployment");
         }
@@ -139,7 +118,7 @@ const EditCode: React.FC<EditCodeProps> = ({
       }
 
       // Then deploy
-      await onDeploy(code, currentVersionIndex);
+      await onDeploy(code, currentVersion);
     } catch (error) {
       console.error("Error deploying:", error);
     } finally {
@@ -157,13 +136,13 @@ const EditCode: React.FC<EditCodeProps> = ({
     if (isEdited && !confirm("Discard changes and reload the original code?")) {
       return;
     }
-    setCode(htmlVersions[currentVersionIndex] || "");
+    setCode(htmlVersions[currentVersion] || "");
     setIsEdited(false);
     // Refocus editor after reset
     if (editorInstance) {
       setTimeout(() => editorInstance.focus(), 100);
     }
-  }, [isEdited, htmlVersions, currentVersionIndex, editorInstance]);
+  }, [isEdited, htmlVersions, currentVersion, editorInstance]);
 
   const goToPreviousVersion = () => {
     if (
@@ -173,14 +152,7 @@ const EditCode: React.FC<EditCodeProps> = ({
       return;
     }
 
-    const newIndex =
-      currentVersionIndex > 0 ? currentVersionIndex - 1 : currentVersionIndex;
-
-    if (onVersionChange) {
-      onVersionChange(newIndex);
-    } else {
-      setLocalVersionIndex(newIndex);
-    }
+    onPrevVersion();
   };
 
   const goToNextVersion = () => {
@@ -191,16 +163,7 @@ const EditCode: React.FC<EditCodeProps> = ({
       return;
     }
 
-    const newIndex =
-      currentVersionIndex < htmlVersions.length - 1
-        ? currentVersionIndex + 1
-        : currentVersionIndex;
-
-    if (onVersionChange) {
-      onVersionChange(newIndex);
-    } else {
-      setLocalVersionIndex(newIndex);
-    }
+    onNextVersion();
   };
 
   const renderIconButton = (
@@ -270,7 +233,7 @@ const EditCode: React.FC<EditCodeProps> = ({
           disabled={!isEdited}
           variant="outline"
           size="sm"
-          className="ml-2 h-7 text-xs py-0 px-2 flex items-center gap-1 border-gray-300"
+          className="h-7 text-xs py-0 px-2 flex items-center gap-1 border-gray-300"
         >
           <RefreshCw size={14} className="mr-1" />
           Reset

@@ -5,27 +5,13 @@ import { AttachmentPreview } from "@/components/input";
 import LandingPage from "@/components/landing-page";
 import PreviewPane from "@/components/preview-pane";
 import { Button } from "@/components/ui/button";
-import { Message as MessageType, useChat } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, EyeIcon, Loader, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-// Check if website generation is in progress from messages
-function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
-  if (!messages?.length) return false;
-
-  return messages.some((m) => 
-    m.role === "assistant" && 
-    m.parts?.some((part: any) => 
-      part.type === "tool-invocation" && 
-      ["createWebsite", "updateWebsite"].includes(part.toolInvocation.toolName) && 
-      part.toolInvocation.state !== "result"
-    )
-  );
-}
 
 type PendingMessage = {
   content: string;
@@ -40,7 +26,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [showPreviewPane, setShowPreviewPane] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<PendingMessage>(null);
-  
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
   // Fetch project data
   const {
     data: project,
@@ -63,6 +50,7 @@ export default function Home() {
 
   const htmlVersions = project?.htmlVersions || [];
   const deployedUrl = project?.domain ? `https://${project.domain}` : null;
+  const deployedVersionIndex = project?.currentHtmlIndex ?? null;
 
   // Handle website deployment
   const deployMutation = useMutation({
@@ -89,6 +77,13 @@ export default function Home() {
     },
   });
 
+  // Invalidate query when isPreviewLoading changes to false (generation completed)
+  useEffect(() => {
+    if (!isPreviewLoading && projectId) {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    }
+  }, [isPreviewLoading, projectId, queryClient]);
+
   // Chat setup
   const {
     messages,
@@ -105,6 +100,11 @@ export default function Home() {
     },
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      setIsPreviewLoading(false);
+    },
+    onToolCall: () => {
+      // Simply toggle the loading state to true when any tool is called
+      setIsPreviewLoading(true);
     },
   });
 
@@ -121,7 +121,7 @@ export default function Home() {
     if (!value.trim() && attachments.length === 0) return;
     setLoading(true);
     setError(null);
-    
+
     try {
       // Create new project
       const projectRes = await fetch("/api/project", { method: "POST" });
@@ -132,7 +132,7 @@ export default function Home() {
 
       // Set projectId, which will trigger useChat initialization
       setProjectId(id);
-      setLandingInput(""); 
+      setLandingInput("");
     } catch (err: any) {
       console.error("Project creation error:", err);
       setError(err.message || "Failed to create project");
@@ -163,11 +163,6 @@ export default function Home() {
     }
   }, [projectId, pendingMessage, append]);
 
-  const isPreviewLoading = useMemo(
-    () => isPreviewLoadingFromMessages(messages),
-    [messages]
-  );
-
   // Render landing page if no projectId
   if (!projectId) {
     return (
@@ -187,7 +182,9 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
-        <div className="text-lg font-medium text-gray-700">Loading your project...</div>
+        <div className="text-lg font-medium text-gray-700">
+          Loading your project...
+        </div>
       </div>
     );
   }
@@ -197,7 +194,9 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-red-50">
         <div className="text-lg font-medium text-red-600 max-w-md text-center mx-auto">
-          {projectError instanceof Error ? projectError.message : "Failed to load project"}
+          {projectError instanceof Error
+            ? projectError.message
+            : "Failed to load project"}
         </div>
       </div>
     );
@@ -205,17 +204,19 @@ export default function Home() {
 
   const renderMobilePreviewDrawer = () => {
     if (!showPreviewPane) return null;
-    
+
     return (
       <div className="fixed inset-0 z-50 flex lg:hidden">
-        <div 
-          className="absolute inset-0 bg-black/40" 
-          onClick={() => setShowPreviewPane(false)} 
+        <div
+          className="absolute inset-0 bg-black/40"
+          onClick={() => setShowPreviewPane(false)}
         />
         <div className="relative w-full h-full bg-white flex flex-col">
           <div className="flex items-center gap-2 px-3 py-2">
             <EyeIcon size={16} className="text-zinc-500" />
-            <span className="text-xs font-medium text-zinc-700">Website Preview</span>
+            <span className="text-xs font-medium text-zinc-700">
+              Website Preview
+            </span>
             <button
               className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"
               onClick={() => setShowPreviewPane(false)}
@@ -227,8 +228,10 @@ export default function Home() {
           <div className="flex-1 overflow-y-auto">
             <PreviewPane
               className="m-0 rounded-none"
-              htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
-              deployedVersionIndex={project?.currentHtmlIndex ?? null}
+              htmlVersions={htmlVersions.map(
+                (v: { htmlContent: string }) => v.htmlContent
+              )}
+              deployedVersionIndex={deployedVersionIndex}
               onDeploy={handleDeploy}
               isUploading={deployMutation.isPending}
               domain={deployedUrl}
@@ -247,12 +250,7 @@ export default function Home() {
     <div className="h-screen flex flex-col">
       {/* Header with domain name and back button */}
       <header className="border-b border-zinc-200 bg-white h-12 flex items-center px-4">
-        <Button 
-          asChild
-          variant="ghost" 
-          size="sm" 
-          className="mr-2 h-8 w-8 p-0"
-        >
+        <Button asChild variant="ghost" size="sm" className="mr-2 h-8 w-8 p-0">
           <Link href="/">
             <ArrowLeft size={18} />
           </Link>
@@ -298,8 +296,10 @@ export default function Home() {
         <div className="hidden lg:flex flex-1 flex-col h-full">
           <div className="h-full flex-1 flex flex-col">
             <PreviewPane
-              htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
-              deployedVersionIndex={project?.currentHtmlIndex ?? null}
+              htmlVersions={htmlVersions.map(
+                (v: { htmlContent: string }) => v.htmlContent
+              )}
+              deployedVersionIndex={deployedVersionIndex}
               onDeploy={handleDeploy}
               isUploading={deployMutation.isPending}
               domain={deployedUrl}

@@ -19,7 +19,7 @@ import {
   Smartphone,
   UploadIcon,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Badge } from "../ui/badge";
 
 // Mobile device dimensions
@@ -56,9 +56,9 @@ export interface WebsitePreviewProps {
   isUploading: boolean;
   isPreviewLoading: boolean;
   deployedUrl: string | null;
-  currentVersionIndex?: number;
-  onVersionChange?: (versionIndex: number) => void;
-  onViewCode?: () => void;
+  currentVersion: number;
+  onNextVersion: () => void;
+  onPrevVersion: () => void;
 }
 
 const WebsitePreview: React.FC<WebsitePreviewProps> = ({
@@ -68,72 +68,20 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   isUploading,
   isPreviewLoading,
   deployedUrl,
-  currentVersionIndex: propVersionIndex,
-  onVersionChange,
-  onViewCode,
+  currentVersion,
+  onNextVersion,
+  onPrevVersion,
 }) => {
-  const [localVersionIndex, setLocalVersionIndex] = useState(
-    propVersionIndex !== undefined
-      ? propVersionIndex
-      : htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
-  );
   const [isMobileView, setIsMobileView] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Use either controlled version index from props or local state
-  const currentVersionIndex = 
-    propVersionIndex !== undefined ? propVersionIndex : localVersionIndex;
-
-  useEffect(() => {
-    if (propVersionIndex !== undefined) {
-      setLocalVersionIndex(propVersionIndex);
-    }
-  }, [propVersionIndex]);
-
-  useEffect(() => {
-    if (htmlVersions.length === 0) {
-      if (onVersionChange) {
-        onVersionChange(0);
-      } else {
-        setLocalVersionIndex(0);
-      }
-    } else if (propVersionIndex === undefined && currentVersionIndex >= htmlVersions.length) {
-      if (onVersionChange) {
-        onVersionChange(htmlVersions.length - 1);
-      } else {
-        setLocalVersionIndex(htmlVersions.length - 1);
-      }
-    }
-  }, [htmlVersions.length, currentVersionIndex, propVersionIndex, onVersionChange]);
-
-  const htmlContent = htmlVersions[currentVersionIndex] || "";
+  const htmlContent = htmlVersions[currentVersion] || "";
   const safeHtmlContent = injectLinkHandler(htmlContent);
-  const versionNumber = currentVersionIndex + 1;
-  const hasPreviousVersion = currentVersionIndex > 0;
-  const hasNextVersion = currentVersionIndex < htmlVersions.length - 1;
-  const isDeployed = deployedVersionIndex === currentVersionIndex;
+  const versionNumber = currentVersion + 1;
+  const hasPreviousVersion = currentVersion > 0;
+  const hasNextVersion = currentVersion < htmlVersions.length - 1;
+  const isDeployed = deployedVersionIndex === currentVersion;
   const hasVersions = htmlVersions.length > 0;
-
-  const goToPreviousVersion = () => {
-    const newIndex = currentVersionIndex > 0 ? currentVersionIndex - 1 : currentVersionIndex;
-    if (onVersionChange) {
-      onVersionChange(newIndex);
-    } else {
-      setLocalVersionIndex(newIndex);
-    }
-  };
-  
-  const goToNextVersion = () => {
-    const newIndex = 
-      currentVersionIndex < htmlVersions.length - 1 
-        ? currentVersionIndex + 1 
-        : currentVersionIndex;
-    if (onVersionChange) {
-      onVersionChange(newIndex);
-    } else {
-      setLocalVersionIndex(newIndex);
-    }
-  };
 
   const toggleViewMode = () => {
     setIsMobileView((prev) => !prev);
@@ -185,7 +133,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
       <div className="flex items-center">
         {hasVersions && renderIconButton(
           <ChevronLeftIcon size={16} />,
-          goToPreviousVersion,
+          onPrevVersion,
           "Previous version",
           !hasPreviousVersion
         )}
@@ -203,7 +151,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
 
         {hasVersions && renderIconButton(
           <ChevronRightIcon size={16} />,
-          goToNextVersion,
+          onNextVersion,
           "Next version",
           !hasNextVersion
         )}
@@ -221,7 +169,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
         isMobileView ? "Switch to desktop view" : "Switch to mobile view",
         false,
         cn(
-          "hidden md:flex md:items-center md:justify-center",
+          "flex items-center justify-center",
           isMobileView && "bg-zinc-200 text-zinc-800"
         )
       )}
@@ -238,18 +186,18 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
           className="h-7 text-xs px-2 flex items-center gap-1"
         >
           <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
-            <ExternalLinkIcon size={14} />
-            <span className="hidden xs:inline">View site</span>
+            <ExternalLinkIcon size={14} className="mr-1" />
+            <span>View site</span>
           </a>
         </Button>
       ) : !isDeployed && htmlContent ? (
         <Button
-          onClick={() => onDeploy(htmlContent, currentVersionIndex)}
+          onClick={() => onDeploy(htmlContent, currentVersion)}
           disabled={isUploading}
           size="sm"
           className="h-7 text-xs px-2 flex items-center gap-1"
         >
-          <UploadIcon size={14} />
+          <UploadIcon size={14} className="mr-1" />
           <span>{isUploading ? "Deploying..." : "Use this version"}</span>
         </Button>
       ) : null}
@@ -300,14 +248,18 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
     </div>
   );
 
-  const renderLoadingOverlay = () => (
-    <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center">
-      <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
-      <div className="text-lg font-medium text-gray-700">
-        Building your website...
+  const renderLoadingOverlay = () => {
+    if (!isPreviewLoading) return null;
+    
+    return (
+      <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center">
+        <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
+        <div className="text-lg font-medium text-gray-700">
+          Building your website...
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -320,7 +272,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
 
       <div className="flex-grow overflow-auto relative min-h-0 bg-white flex items-center justify-center">
         {htmlContent ? renderIframe() : renderEmptyState()}
-        {isPreviewLoading && renderLoadingOverlay()}
+        {renderLoadingOverlay()}
       </div>
     </div>
   );

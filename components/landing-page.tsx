@@ -261,20 +261,20 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
 
   return (
     <div className={cn("min-h-screen bg-white", className)}>
-      <div className="max-w-screen-md mx-auto px-5 py-14">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-zinc-900 mb-3">AI Website Generator</h1>
-          <p className="text-zinc-600 text-lg">
+      <div className="max-w-screen-md mx-auto px-4 sm:px-5 py-8 sm:py-14">
+        <div className="mb-8 sm:mb-12 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-2 sm:mb-3">AI Website Generator</h1>
+          <p className="text-zinc-600 text-base sm:text-lg px-1">
             Create beautiful, responsive websites with AI in seconds — no coding required
           </p>
         </div>
         
         {/* Tabs */}
-        <div className="flex justify-center border-b border-zinc-200 mb-8">
+        <div className="flex justify-center border-b border-zinc-200 mb-6 sm:mb-8">
           <button
             onClick={() => setActiveTab("create")}
             className={cn(
-              "px-8 py-3 font-medium text-sm transition-colors",
+              "px-4 sm:px-8 py-3 font-medium text-sm transition-colors",
               activeTab === "create"
                 ? "text-zinc-900 border-b-2 border-zinc-900"
                 : "text-zinc-500 hover:text-zinc-700"
@@ -285,7 +285,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
           <button
             onClick={() => setActiveTab("projects")}
             className={cn(
-              "px-8 py-3 font-medium text-sm transition-colors",
+              "px-4 sm:px-8 py-3 font-medium text-sm transition-colors",
               activeTab === "projects"
                 ? "text-zinc-900 border-b-2 border-zinc-900"
                 : "text-zinc-500 hover:text-zinc-700"
@@ -297,8 +297,8 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
         
         {activeTab === "create" ? (
           <>
-            <div className="mb-7">
-              <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Create an AI-powered website</h2>
+            <div className="mb-5 sm:mb-7">
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900 mb-2">Create an AI-powered website</h2>
               <p className="text-zinc-600 text-sm">
                 Describe your ideal website in detail or select from the templates below.
               </p>
@@ -320,31 +320,31 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
               </div>
             )}
               
-            <div className="mt-10">
-              <h3 className="text-md font-medium text-zinc-800 mb-4">Quick-start templates</h3>
-              <div className="grid sm:grid-cols-2 gap-4">
+            <div className="mt-8 sm:mt-10">
+              <h3 className="text-md font-medium text-zinc-800 mb-3 sm:mb-4">Quick-start templates</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {suggestions.map((action, index) => (
                   <button
                     key={index}
                     type="button"
                     onClick={() => onSend(action.action, [])}
                     className={cn(
-                      "text-left border border-zinc-200 bg-white rounded-lg p-5 transition-all",
+                      "text-left border border-zinc-200 bg-white rounded-lg p-4 sm:p-5 transition-all",
                       "hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm flex",
                       loading && "opacity-50 cursor-not-allowed"
                     )}
                     disabled={loading}
                   >
-                    <div className="flex gap-4 items-start">
-                      <div className="shrink-0 bg-zinc-50 p-3 rounded-lg">
+                    <div className="flex gap-3 sm:gap-4 items-start">
+                      <div className="shrink-0 bg-zinc-50 p-2 sm:p-3 rounded-lg">
                         {action.icon}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="mb-1">
                           <span className="text-zinc-400 text-xs block">
                             {action.title}
                           </span>
-                          <span className="font-medium text-zinc-900">
+                          <span className="font-medium text-zinc-900 line-clamp-1">
                             {action.label}
                           </span>
                         </div>
@@ -362,7 +362,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
           <>
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               {isLoading ? (
-                <div className="py-20 flex flex-col items-center justify-center">
+                <div className="py-16 sm:py-20 flex flex-col items-center justify-center">
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full border-2 border-zinc-100"></div>
                     <Loader className="w-6 h-6 text-zinc-600 animate-spin absolute inset-0 m-auto" />
@@ -381,7 +381,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                         <div
                           key={project.id}
                           className={cn(
-                            "p-5 transition-all border-b border-zinc-100 relative",
+                            "p-4 sm:p-5 transition-all border-b border-zinc-100 relative",
                             isDeleting
                               ? "opacity-60 pointer-events-none bg-zinc-50"
                               : ""
@@ -402,8 +402,8 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                                 cursor: isDeleting ? "default" : "pointer",
                               }}
                             >
-                              <div className="text-zinc-900 font-medium truncate group flex items-center">
-                                {project.domain}
+                              <div className="text-zinc-900 font-medium truncate group flex items-center flex-wrap">
+                                <span className="truncate max-w-[180px] sm:max-w-full">{project.domain}</span>
                                 {project.currentHtmlIndex !== null ? (
                                   <Badge
                                     variant="outline"
@@ -420,8 +420,8 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                                   </Badge>
                                 )}
                               </div>
-                              <div className="flex items-center text-zinc-500 text-xs mt-1.5">
-                                <span>
+                              <div className="flex flex-wrap items-center text-zinc-500 text-xs mt-1.5">
+                                <span className="inline-block">
                                   Created{" "}
                                   {format(
                                     new Date(project.createdAt),
@@ -433,7 +433,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                                     <span className="mx-2 text-zinc-300">
                                       •
                                     </span>
-                                    <div className="flex items-center">
+                                    <div className="inline-flex items-center">
                                       <div className="text-sm text-zinc-400 font-medium flex items-center gap-1.5">
                                         <span className="h-1.5 w-1.5 rounded-full bg-zinc-300"></span>
                                         <span>
@@ -445,7 +445,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                                 )}
                               </div>
                             </div>
-                            <div className="ml-4 flex-shrink-0">
+                            <div className="ml-2 sm:ml-4 flex-shrink-0">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -494,7 +494,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                   
                   {/* Pagination section */}
                   {totalPages > 1 && (
-                    <div className="p-4 border-t border-zinc-200">
+                    <div className="p-3 sm:p-4 border-t border-zinc-200">
                       {renderPagination()}
                     </div>
                   )}
