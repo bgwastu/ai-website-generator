@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ExternalLink, Loader, MoreVertical, Plus, Trash2, Loader2, Code, BarChart3, Building2, Camera, ShoppingBag } from "lucide-react";
+import { BarChart3, Building2, Camera, Code, ExternalLink, Loader, MoreVertical, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -44,25 +44,25 @@ interface Project {
 const suggestions = [
   {
     title: "Create a",
-    label: "business landing page",
+    label: "Business landing page",
     icon: <Building2 className="w-8 h-8 text-zinc-500" />,
     action: "Create a modern, professional landing page for a tech startup with hero section, feature highlights, pricing table, and testimonials. Include smooth animations and a contact form.",
   },
   {
     title: "Build a",
-    label: "crypto dashboard",
+    label: "Crypto dashboard",
     icon: <BarChart3 className="w-8 h-8 text-zinc-500" />,
     action: "Build an interactive cryptocurrency dashboard with price charts, market trends, and real-time data. Include the latest crypto news.",
   },
   {
     title: "Design a",
-    label: "portfolio website",
+    label: "Portfolio website",
     icon: <Camera className="w-8 h-8 text-zinc-500" />,
     action: "Design a stunning portfolio website for a photographer with gallery grid, image lightbox, about section, and contact form. Use subtle animations and ensure optimal image display.",
   },
   {
     title: "Generate a",
-    label: "product showcase",
+    label: "Product showcase",
     icon: <ShoppingBag className="w-8 h-8 text-zinc-500" />,
     action: "Generate a product showcase website with featured product slider, detailed specifications, comparison tables, and FAQ accordion. Make it fully responsive with a clean, modern design.",
   },
@@ -280,7 +280,7 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                 : "text-zinc-500 hover:text-zinc-700"
             )}
           >
-            Create New
+            Create Website
           </button>
           <button
             onClick={() => setActiveTab("projects")}
@@ -297,66 +297,64 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
         
         {activeTab === "create" ? (
           <>
-            <div id="create-section" className="bg-white rounded-xl border border-zinc-200 p-8">
-              <div className="mb-7">
-                <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Create an AI-powered website</h2>
-                <p className="text-zinc-600 text-sm">
-                  Describe your ideal website in detail or select from the templates below.
-                </p>
+            <div className="mb-7">
+              <h2 className="text-2xl font-semibold text-zinc-900 mb-2">Create an AI-powered website</h2>
+              <p className="text-zinc-600 text-sm">
+                Describe your ideal website in detail or select from the templates below.
+              </p>
+            </div>
+              
+            <Input
+              value={input}
+              onChange={setInput}
+              onSend={onSend}
+              loading={loading}
+              disabled={loading}
+              className="mb-5"
+              placeholder="Describe your dream website in detail..."
+            />
+              
+            {error && (
+              <div className="text-red-500 text-sm mb-6 p-3 bg-red-50 rounded-md border border-red-200">
+                {error}
               </div>
+            )}
               
-              <Input
-                value={input}
-                onChange={setInput}
-                onSend={onSend}
-                loading={loading}
-                disabled={loading}
-                className="mb-5"
-                placeholder="Describe your dream website in detail..."
-              />
-              
-              {error && (
-                <div className="text-red-500 text-sm mb-6 p-3 bg-red-50 rounded-md border border-red-200">
-                  {error}
-                </div>
-              )}
-              
-              <div className="mt-10">
-                <h3 className="text-md font-medium text-zinc-800 mb-4">Quick-start templates</h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {suggestions.map((action, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => onSend(action.action, [])}
-                      className={cn(
-                        "text-left border border-zinc-200 bg-white rounded-lg p-5 transition-all",
-                        "hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm flex",
-                        loading && "opacity-50 cursor-not-allowed"
-                      )}
-                      disabled={loading}
-                    >
-                      <div className="flex gap-4 items-start">
-                        <div className="shrink-0 bg-zinc-50 p-3 rounded-lg">
-                          {action.icon}
-                        </div>
-                        <div>
-                          <div className="mb-1">
-                            <span className="text-zinc-400 text-xs block">
-                              {action.title}
-                            </span>
-                            <span className="font-medium text-zinc-900">
-                              {action.label}
-                            </span>
-                          </div>
-                          <span className="text-zinc-500 text-xs line-clamp-2">
-                            {action.action}
+            <div className="mt-10">
+              <h3 className="text-md font-medium text-zinc-800 mb-4">Quick-start templates</h3>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {suggestions.map((action, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => onSend(action.action, [])}
+                    className={cn(
+                      "text-left border border-zinc-200 bg-white rounded-lg p-5 transition-all",
+                      "hover:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm flex",
+                      loading && "opacity-50 cursor-not-allowed"
+                    )}
+                    disabled={loading}
+                  >
+                    <div className="flex gap-4 items-start">
+                      <div className="shrink-0 bg-zinc-50 p-3 rounded-lg">
+                        {action.icon}
+                      </div>
+                      <div>
+                        <div className="mb-1">
+                          <span className="text-zinc-400 text-xs block">
+                            {action.title}
+                          </span>
+                          <span className="font-medium text-zinc-900">
+                            {action.label}
                           </span>
                         </div>
+                        <span className="text-zinc-500 text-xs line-clamp-2">
+                          {action.action}
+                        </span>
                       </div>
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
           </>
@@ -380,12 +378,12 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                     {projects.map((project: Project) => {
                       const isDeleting = deletingProjectId === project.id;
                       return (
-                        <div 
-                          key={project.id} 
+                        <div
+                          key={project.id}
                           className={cn(
                             "p-5 transition-all border-b border-zinc-100 relative",
-                            isDeleting 
-                              ? "opacity-60 pointer-events-none bg-zinc-50" 
+                            isDeleting
+                              ? "opacity-60 pointer-events-none bg-zinc-50"
                               : ""
                           )}
                         >
@@ -394,27 +392,46 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                               <Loader className="w-5 h-5 text-zinc-600 animate-spin" />
                             </div>
                           )}
-                          <div className="flex justify-between items-start mb-3">
-                            <div 
+                          <div className="flex justify-between items-start">
+                            <div
                               className="flex-1 min-w-0"
-                              onClick={() => !isDeleting && handleOpenProject(project.id)}
-                              style={{ cursor: isDeleting ? 'default' : 'pointer' }}
+                              onClick={() =>
+                                !isDeleting && handleOpenProject(project.id)
+                              }
+                              style={{
+                                cursor: isDeleting ? "default" : "pointer",
+                              }}
                             >
                               <div className="text-zinc-900 font-medium truncate group flex items-center">
                                 {project.domain}
                                 {project.currentHtmlIndex !== null && (
-                                  <Badge className="ml-3 bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px]">Live</Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="ml-2 h-5 bg-green-50 text-green-700 border-green-200 text-[10px] font-medium"
+                                  >
+                                    Live
+                                  </Badge>
                                 )}
                               </div>
                               <div className="flex items-center text-zinc-500 text-xs mt-1.5">
-                                <span>Created {format(new Date(project.createdAt), "MMM d, yyyy")}</span>
+                                <span>
+                                  Created{" "}
+                                  {format(
+                                    new Date(project.createdAt),
+                                    "MMM d, yyyy"
+                                  )}
+                                </span>
                                 {project.htmlVersions.length > 0 && (
                                   <>
-                                    <span className="mx-2 text-zinc-300">•</span>
+                                    <span className="mx-2 text-zinc-300">
+                                      •
+                                    </span>
                                     <div className="flex items-center">
                                       <div className="text-sm text-zinc-400 font-medium flex items-center gap-1.5">
                                         <span className="h-1.5 w-1.5 rounded-full bg-zinc-300"></span>
-                                        <span>v{project.htmlVersions.length}</span>
+                                        <span>
+                                          Version {project.htmlVersions.length}
+                                        </span>
                                       </div>
                                     </div>
                                   </>
@@ -424,9 +441,9 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                             <div className="ml-4 flex-shrink-0">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-8 w-8 p-0"
                                     disabled={isDeleting}
                                   >
@@ -439,14 +456,20 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                                     <DropdownMenuItem
                                       className="cursor-pointer"
                                       onClick={() => {
-                                        window.open(`https://${project.domain}`, '_blank');
+                                        window.open(
+                                          `https://${project.domain}`,
+                                          "_blank"
+                                        );
                                       }}
                                     >
-                                      <ExternalLink size={14} className="mr-2" />
+                                      <ExternalLink
+                                        size={14}
+                                        className="mr-2"
+                                      />
                                       See website
                                     </DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     onClick={() => handleDelete(project.id)}
                                     className="text-red-600 cursor-pointer"
                                   >
