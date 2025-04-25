@@ -6,10 +6,12 @@ import LandingPage from "@/components/landing-page";
 import PreviewPane from "@/components/preview-pane";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, GlobeIcon, Loader, XIcon } from "lucide-react";
+import { ArrowLeft, ChevronLeft, GlobeIcon, Loader, XIcon } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // Check if website generation is in progress from messages
 function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
@@ -177,6 +179,7 @@ export default function Home() {
         onSend={handleLandingSend}
         loading={loading}
         error={error}
+        className="container mx-auto max-w-screen-md"
       />
     );
   }
@@ -201,11 +204,31 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen">
+    <div className="h-screen flex flex-col">
+      {/* Header with domain name and back button */}
+      <header className="border-b border-zinc-200 bg-white h-12 flex items-center px-4">
+        <Button 
+          asChild
+          variant="ghost" 
+          size="sm" 
+          className="mr-2 h-8 w-8 p-0"
+        >
+          <Link href="/">
+            <ArrowLeft size={18} />
+          </Link>
+        </Button>
+        <div className="flex items-center gap-1.5">
+          <GlobeIcon size={16} className="text-zinc-600" />
+          <span className="text-sm font-medium text-zinc-800">
+            {project?.domain || "Project " + projectId?.substring(0, 8)}
+          </span>
+        </div>
+      </header>
+
       {/* Floating toggle button for mobile */}
       {!showPreviewPane && (
         <button
-          className="fixed z-40 top-6 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md pl-2 pr-2 py-2 flex items-center"
+          className="fixed z-40 top-16 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md pl-2 pr-2 py-2 flex items-center"
           onClick={() => setShowPreviewPane(true)}
           aria-label="Show Preview Pane"
         >
@@ -215,7 +238,7 @@ export default function Home() {
 
       {/* Mobile Preview Pane Drawer */}
       {showPreviewPane && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
+        <div className="fixed inset-0 z-50 flex lg:hidden pt-12">
           <div 
             className="absolute inset-0 bg-black/40" 
             onClick={() => setShowPreviewPane(false)} 
@@ -235,7 +258,7 @@ export default function Home() {
             </div>
             <div className="flex-1 overflow-y-auto">
               <PreviewPane
-              className="m-0 rounded-none"
+                className="m-0 rounded-none"
                 htmlVersions={htmlVersions.map(
                   (v: { htmlContent: string }) => v.htmlContent
                 )}
@@ -253,7 +276,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row h-screen">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Chat section */}
         <div className="flex-1 w-full h-full lg:max-w-[600px] flex flex-col">
           <Chat

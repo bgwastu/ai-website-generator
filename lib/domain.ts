@@ -47,7 +47,9 @@ export async function createDomain(domain: string): Promise<boolean> {
 export async function deleteDomain(domain: string): Promise<boolean> {
   const LAMAN_API_KEY = process.env.LAMAN_API_KEY;
   if (!LAMAN_API_KEY) throw new Error('LAMAN_API_KEY not set');
-  const res = await fetch('https://laman.ai/remove-domain', {
+  
+  // Delete domain from Laman.ai
+  const domainRes = await fetch('https://laman.ai/remove-domain', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -55,7 +57,18 @@ export async function deleteDomain(domain: string): Promise<boolean> {
     },
     body: JSON.stringify({ domain }),
   });
-  return res.ok;
+
+  // Delete all S3 objects for this domain
+  const s3Res = await fetch('https://laman.ai/remove-s3-objects', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': LAMAN_API_KEY,
+    },
+    body: JSON.stringify({ domain }),
+  });
+  
+  return domainRes.ok && s3Res.ok;
 }
 
 export async function deployHtmlToDomain(domain: string, html: string): Promise<string> {

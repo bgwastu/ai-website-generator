@@ -11,7 +11,7 @@ import {
   UserIcon,
 } from "lucide-react";
 import Image from "next/image";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Markdown } from "./markdown";
 import { TextShimmer } from "./text-shimmer";
 
@@ -241,6 +241,9 @@ export function Chat({
 }: ChatProps) {
   const [input, setInput] = React.useState("");
   const [containerRef, endRef] = useScrollToBottom<HTMLDivElement>();
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
   
   // Find the latest assistant message with tool info
   const latestAssistantMsg = [...messages].reverse().find(m => m.role === "assistant");
@@ -250,6 +253,49 @@ export function Chat({
     handleSend(value, newAttachments);
     setInput("");
   };
+  
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    let timeout: NodeJS.Timeout;
+    const scrollHandler = () => {
+      // Clear any existing timeout
+      if (timeout) clearTimeout(timeout);
+      
+      // Get scroll position
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight;
+      const clientHeight = container.clientHeight;
+      
+      // Show top gradient when not at the top
+      setShowTopGradient(scrollTop > 20);
+      
+      // Show bottom gradient when not at the bottom
+      setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 20);
+      
+      // Set scrolling state to true
+      setIsScrolling(true);
+      
+      // Set a timeout to reset scrolling state
+      timeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 1000);
+    };
+    
+    // Initial check
+    scrollHandler();
+    
+    // Add scroll event listener
+    container.addEventListener('scroll', scrollHandler);
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      if (container) {
+        container.removeEventListener('scroll', scrollHandler);
+      }
+    };
+  }, [containerRef, messages]);
   
   const isInputDisabled = ["streaming", "submitted", "tooling"].includes(status);
   
@@ -274,7 +320,17 @@ export function Chat({
         </div>
         
         {messages.length > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          <>
+            {/* Top gradient - only shown when scrolling down from top */}
+            {showTopGradient && (
+              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-white to-transparent pointer-events-none transition-opacity duration-300" />
+            )}
+            
+            {/* Bottom gradient - only shown when not at the bottom */}
+            {showBottomGradient && (
+              <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none transition-opacity duration-300" />
+            )}
+          </>
         )}
       </div>
       

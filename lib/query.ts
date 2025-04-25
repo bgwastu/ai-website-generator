@@ -84,6 +84,15 @@ export function getWebProject(id: string): WebProject | undefined {
   return store.get(id);
 }
 
+/**
+ * Returns all web projects in the store sorted by creation date (newest first)
+ * @returns Array of all WebProject objects sorted by descending creation date
+ */
+export function getAllWebProjects(): WebProject[] {
+  return Array.from(store.values())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 export function updateWebProject(id: string, update: Partial<Omit<WebProject, 'id'>>): WebProject | undefined {
   const project = store.get(id);
   if (!project) return undefined;

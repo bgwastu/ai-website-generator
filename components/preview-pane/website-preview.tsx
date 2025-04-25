@@ -10,11 +10,17 @@ import {
   RefreshCw,
   UploadIcon,
   Smartphone,
-  Monitor
+  Monitor,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { Badge } from "../ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function injectLinkHandler(html: string): string {
   const handlerScript = `
@@ -81,7 +87,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   };
 
   const toggleViewMode = () => {
-    setIsMobileView(prev => !prev);
+    setIsMobileView((prev) => !prev);
   };
 
   const htmlContent = htmlVersions[currentVersionIndex] || "";
@@ -94,10 +100,10 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   // Function to refresh only the iframe
   const refreshIframe = () => {
     if (iframeRef.current) {
-      iframeRef.current.src = 'about:blank';
+      iframeRef.current.src = "about:blank";
       setTimeout(() => {
         if (iframeRef.current) {
-          iframeRef.current.src = '';
+          iframeRef.current.src = "";
           iframeRef.current.srcdoc = safeHtmlContent;
         }
       }, 50);
@@ -113,79 +119,133 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
         <div className="flex h-9 items-center px-2 gap-2">
           {/* Version Navigation */}
           <div className="flex items-center">
-            <Button
-              onClick={goToPreviousVersion}
-              disabled={!hasPreviousVersion}
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
-              title="Previous version"
-            >
-              <ChevronLeftIcon size={16} />
-            </Button>
-            
-            <div className="flex items-center px-2">
-              <span className="text-xs font-medium text-zinc-700">
-                Version {versionNumber}
-              </span>
-              {isDeployed && (
-                <Badge variant="outline" className="ml-2 h-5 bg-green-50 text-green-700 border-green-200 text-[10px] font-medium">
-                  Live
-                </Badge>
+            {/* Version Info */}
+            <div className="flex items-center">
+              {htmlVersions.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={goToPreviousVersion}
+                        disabled={!hasPreviousVersion}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+                      >
+                        <ChevronLeftIcon size={16} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      Previous version
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              <div className="flex items-center px-2">
+                <span className="text-xs font-medium text-zinc-700">
+                  {htmlVersions.length > 0 ? (
+                    <>Version {versionNumber}</>
+                  ) : (
+                    "No versions"
+                  )}
+                </span>
+                {isDeployed && (
+                  <Badge
+                    variant="outline"
+                    className="ml-2 h-5 bg-green-50 text-green-700 border-green-200 text-[10px] font-medium"
+                  >
+                    Live
+                  </Badge>
+                )}
+              </div>
+
+              {htmlVersions.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={goToNextVersion}
+                        disabled={!hasNextVersion}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+                      >
+                        <ChevronRightIcon size={16} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">Next version</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
-            
-            <Button
-              onClick={goToNextVersion}
-              disabled={!hasNextVersion}
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
-              title="Next version"
-            >
-              <ChevronRightIcon size={16} />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 rounded-sm text-zinc-700"
-              onClick={refreshIframe}
-              title="Refresh preview"
-            >
-              <RefreshCw size={14} />
-            </Button>
-            
+
+            {htmlVersions.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 rounded-sm text-zinc-700"
+                      onClick={refreshIframe}
+                    >
+                      <RefreshCw size={14} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Refresh preview</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Mobile/Desktop toggle button - hidden on mobile devices */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-7 w-7 p-0 rounded-sm hidden md:flex md:items-center md:justify-center", 
-                isMobileView ? "bg-zinc-200 text-zinc-800" : "text-zinc-700"
-              )}
-              onClick={toggleViewMode}
-              title={isMobileView ? "Switch to desktop view" : "Switch to mobile view"}
-            >
-              {isMobileView ? <Monitor size={14} /> : <Smartphone size={14} />}
-            </Button>
+            {htmlVersions.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "h-7 w-7 p-0 rounded-sm hidden md:flex md:items-center md:justify-center",
+                        isMobileView
+                          ? "bg-zinc-200 text-zinc-800"
+                          : "text-zinc-700"
+                      )}
+                      onClick={toggleViewMode}
+                    >
+                      {isMobileView ? (
+                        <Monitor size={14} />
+                      ) : (
+                        <Smartphone size={14} />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {isMobileView
+                      ? "Switch to desktop view"
+                      : "Switch to mobile view"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
-          
+
           {/* Spacer */}
           <div className="flex-1"></div>
-          
+
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
             {isDeployed && deployedUrl ? (
-              <Button 
-                asChild 
-                variant="outline" 
+              <Button
+                asChild
+                variant="outline"
                 size="sm"
                 className="h-7 text-xs px-2 flex items-center gap-1"
               >
                 <a href={deployedUrl} target="_blank" rel="noopener noreferrer">
                   <ExternalLinkIcon size={14} />
-                  <span>View site</span>
+                  <span className="hidden xs:inline">View site</span>
                 </a>
               </Button>
             ) : !isDeployed && htmlContent ? (
@@ -202,13 +262,17 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
           </div>
         </div>
       </div>
-      
+
       <div className="flex-grow overflow-auto relative min-h-0 bg-white flex items-center justify-center">
         {htmlContent ? (
-          <div className={cn(
-            "transition-all duration-300 ease-in-out",
-            isMobileView ? "scale-90 border-8 border-zinc-800 rounded-lg shadow-lg" : "w-full h-full"
-          )}>
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out",
+              isMobileView
+                ? "scale-90 border-8 border-zinc-800 rounded-lg shadow-lg"
+                : "w-full h-full"
+            )}
+          >
             <iframe
               ref={iframeRef}
               srcDoc={safeHtmlContent}
@@ -231,7 +295,9 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
               <div className="rounded-full bg-zinc-100 p-4">
                 <Layout size={32} className="text-zinc-400" />
               </div>
-              <h3 className="text-lg font-medium text-zinc-700">No preview available</h3>
+              <h3 className="text-lg font-medium text-zinc-700">
+                No preview available
+              </h3>
               <p className="text-sm text-zinc-500">
                 Describe the website you want to build in the chat to generate a
                 preview. Your website will appear here once it&apos;s created.
@@ -240,15 +306,10 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
           </div>
         )}
         {isPreviewLoading && (
-          <div className="absolute inset-0 bg-white backdrop-blur-sm flex flex-col items-center justify-center">
-            <div className="flex flex-col items-center gap-4 max-w-xs text-center">
-              <Loader size={28} className="text-zinc-600 animate-spin" />
-              <div>
-                <h3 className="text-base font-medium text-zinc-800">Generating preview</h3>
-                <p className="text-sm text-zinc-500 mt-1">
-                  Building your website with AI. This may take a moment...
-                </p>
-              </div>
+          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center">
+            <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
+            <div className="text-lg font-medium text-gray-700">
+              Building your website...
             </div>
           </div>
         )}
