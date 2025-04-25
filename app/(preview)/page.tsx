@@ -77,21 +77,10 @@ export default function Home() {
       }
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success(
         <div className="flex flex-col gap-1 items-start">
           <span>Website deployed successfully!</span>
-          {data.url && (
-            <a
-              href={data.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {data.url}
-            </a>
-          )}
         </div>
       );
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
@@ -195,7 +184,7 @@ export default function Home() {
   // Render loading state
   if (projectLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b from-white to-blue-50">
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b">
         <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
         <div className="text-lg font-medium text-gray-700">Loading your project...</div>
       </div>
@@ -234,7 +223,7 @@ export default function Home() {
           <div className="relative ml-auto w-full max-w-md h-full bg-white flex flex-col">
             {/* Compact mobile header */}
             <div className="flex items-center gap-2 px-3 py-2">
-              <GlobeIcon size={16} className="text-blue-500" />
+              <GlobeIcon size={16} className="text-zinc-500" />
               <span className="text-xs font-medium text-zinc-700">Website Preview</span>
               <button
                 className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"

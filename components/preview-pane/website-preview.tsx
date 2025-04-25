@@ -8,10 +8,13 @@ import {
   Layout,
   Loader,
   RefreshCw,
-  UploadIcon
+  UploadIcon,
+  Smartphone,
+  Monitor
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 
 function injectLinkHandler(html: string): string {
   const handlerScript = `
@@ -56,6 +59,7 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
   const [currentVersionIndex, setCurrentVersionIndex] = useState(
     htmlVersions.length > 0 ? htmlVersions.length - 1 : 0
   );
+  const [isMobileView, setIsMobileView] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Keep currentVersionIndex in sync with htmlVersions length
@@ -74,6 +78,10 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
     setCurrentVersionIndex((prev) =>
       prev < htmlVersions.length - 1 ? prev + 1 : prev
     );
+  };
+
+  const toggleViewMode = () => {
+    setIsMobileView(prev => !prev);
   };
 
   const htmlContent = htmlVersions[currentVersionIndex] || "";
@@ -95,6 +103,9 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
       }, 50);
     }
   };
+
+  const mobileWidth = 375; // iPhone standard width
+  const mobileHeight = 667; // Approximate height
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -144,6 +155,20 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
             >
               <RefreshCw size={14} />
             </Button>
+            
+            {/* Mobile/Desktop toggle button - hidden on mobile devices */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-7 w-7 p-0 rounded-sm hidden md:flex md:items-center md:justify-center", 
+                isMobileView ? "bg-zinc-200 text-zinc-800" : "text-zinc-700"
+              )}
+              onClick={toggleViewMode}
+              title={isMobileView ? "Switch to desktop view" : "Switch to mobile view"}
+            >
+              {isMobileView ? <Monitor size={14} /> : <Smartphone size={14} />}
+            </Button>
           </div>
           
           {/* Spacer */}
@@ -178,23 +203,30 @@ const WebsitePreview: React.FC<WebsitePreviewProps> = ({
         </div>
       </div>
       
-      <div className="flex-grow overflow-auto relative min-h-0 bg-white">
+      <div className="flex-grow overflow-auto relative min-h-0 bg-white flex items-center justify-center">
         {htmlContent ? (
-          <iframe
-            ref={iframeRef}
-            srcDoc={safeHtmlContent}
-            title="Generated Website Preview"
-            sandbox="allow-scripts allow-same-origin"
-            width="100%"
-            height="100%"
-            style={{
-              border: "none",
-              minHeight: 0,
-              height: "100%",
-            }}
-          />
+          <div className={cn(
+            "transition-all duration-300 ease-in-out",
+            isMobileView ? "scale-90 border-8 border-zinc-800 rounded-lg shadow-lg" : "w-full h-full"
+          )}>
+            <iframe
+              ref={iframeRef}
+              srcDoc={safeHtmlContent}
+              title="Generated Website Preview"
+              sandbox="allow-scripts allow-same-origin"
+              width={isMobileView ? mobileWidth : "100%"}
+              height={isMobileView ? mobileHeight : "100%"}
+              style={{
+                border: "none",
+                minHeight: 0,
+                height: isMobileView ? `${mobileHeight}px` : "100%",
+                width: isMobileView ? `${mobileWidth}px` : "100%",
+                borderRadius: isMobileView ? "20px" : 0,
+              }}
+            />
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[200px] bg-zinc-50 text-zinc-500">
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] bg-zinc-50 text-zinc-500 w-full">
             <div className="flex flex-col items-center gap-4 max-w-md p-6 text-center">
               <div className="rounded-full bg-zinc-100 p-4">
                 <Layout size={32} className="text-zinc-400" />
