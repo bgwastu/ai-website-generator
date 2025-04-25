@@ -3,127 +3,69 @@ import { generateText, tool } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getWebProject, addHtmlVersion } from "@/lib/query";
 import { deployHtmlToDomain } from "@/lib/domain";
+import { generateId } from "@/lib/utils";
+
+// Define types for asset objects
+interface Asset {
+  id: string;
+  description: string;
+  url: string;
+  type: string;
+}
 
 /**
- * Tool for updating an existing website
+ * Helper function to format selected assets for the prompt
  */
-export const updateWebsite = tool({
-  description:
-    "Update an existing website based on user requirements and context",
-  parameters: z.object({
-    projectId: z.string().describe("The ID of the project to update"),
-    updateInstructions: z
-      .string()
-      .describe("Detailed instructions for how to update the website"),
-    context: z
-      .string()
-      .optional()
-      .describe(
-        "Additional context or data points to use when updating the website"
-      ),
-    targetSection: z
-      .string()
-      .optional()
-      .describe(
-        "Specific section of the website to update (e.g., 'header', 'main content', 'footer')"
-      ),
-    versionId: z
-      .string()
-      .optional()
-      .describe(
-        "Optional specific HTML version to update from, instead of the latest"
-      ),
-    assetIds: z
-      .array(z.string())
-      .optional()
-      .describe("IDs of assets to use in the update"),
-  }),
-  execute: async ({
-    projectId,
-    updateInstructions,
-    context = "",
-    targetSection,
-    versionId,
-    assetIds = [],
-  }) => {
-    try {
-      // Get the current project to retrieve the latest HTML
-      const project = getWebProject(projectId);
-      if (!project) {
-        return {
-          success: false,
-          message: "Project not found",
-        };
-      }
+function formatAssetsString(selectedAssets: Asset[]): string {
+  if (selectedAssets.length === 0) {
+    return "";
+  }
 
-      // Get the HTML content based on versionId or current version
-      let currentHtml = null;
-      if (versionId) {
-        // Find the specific version
-        const targetVersion = project.htmlVersions?.find(
-          (v) => v.id === versionId
-        );
-        if (targetVersion) {
-          currentHtml = targetVersion.htmlContent;
-        } else {
-          return {
-            success: false,
-            message: `Version with ID ${versionId} not found.`,
-          };
-        }
-      } else if (
-        project.htmlVersions &&
-        project.htmlVersions.length > 0 &&
-        project.currentHtmlIndex !== null
-      ) {
-        currentHtml =
-          project.htmlVersions[project.currentHtmlIndex].htmlContent;
-      } else {
-        return {
-          success: false,
-          message:
-            "No existing website found to update. Please use createWebsite instead.",
-        };
-      }
-
-      // Get the assets by ID
-      const assets = project.assets || [];
-      const selectedAssets =
-        assetIds.length > 0
-          ? assets.filter((asset) => assetIds.includes(asset.id))
-          : [];
-
-      // Format assets for the prompt
-      const assetsString =
-        selectedAssets.length > 0
-          ? `<ASSETS_TO_USE>
+  return `<ASSETS_TO_USE>
 ${selectedAssets
   .map(
-    (asset, index) =>
+    (asset: Asset, index: number) =>
       `Asset ${index + 1}:
 Description: ${asset.description}
 URL: ${asset.url}
 Type: ${asset.type}`
   )
-  .join("\\n")}
+  .join("\n")}
 </ASSETS_TO_USE>
-`
-          : "<ASSETS_TO_USE>None</ASSETS_TO_USE>";
+`;
+}
 
-      // Format context for the prompt
-      const contextString = context
-        ? `<ADDITIONAL_CONTEXT>
+/**
+ * Helper function to format context for the prompt
+ */
+function formatContextString(context: string | undefined): string {
+  if (!context) {
+    return "";
+  }
+
+  return `<ADDITIONAL_CONTEXT>
 ${context}
 </ADDITIONAL_CONTEXT>
-`
-        : "<ADDITIONAL_CONTEXT>None</ADDITIONAL_CONTEXT>";
+`;
+}
 
-      let updatedHtml;
+/**
+ * Helper function to clean HTML output by removing markdown formatting
+ */
+function cleanHtmlOutput(html: string): string {
+  let cleanedHtml = html;
+  // Remove triple backticks if present
+  if (cleanedHtml.startsWith("```") || cleanedHtml.startsWith("```html")) {
+    cleanedHtml = cleanedHtml.replace(/^```(html)?\n/, "").replace(/```$/, "");
+  }
+  return cleanedHtml;
+}
 
-      // If a specific section is targeted, update just that section
-      if (targetSection) {
-        // Define system prompt for section update
-        const sectionSystemPrompt = `<SYSTEM_PROMPT>
+/**
+ * System prompt for section updates
+ */
+function getSectionUpdateSystemPrompt(targetSection: string): string {
+  return `<SYSTEM_PROMPT>
 Update a specific section of a website built with HTML, Tailwind CSS, and vanilla JavaScript.
 
 <SECTION_UPDATE_REQUIREMENTS>
@@ -184,29 +126,13 @@ If this section is part of a data-driven dashboard:
 
 Output ONLY the section HTML (with begin/end comments) and NO explanations.
 </SYSTEM_PROMPT>`;
+}
 
-        // Define user prompt for section update
-        const sectionUserPrompt = `<CURRENT_HTML_REFERENCE_ONLY>
-${currentHtml}
-</CURRENT_HTML_REFERENCE_ONLY>
-
-<UPDATE_INSTRUCTIONS>
-${updateInstructions}
-</UPDATE_INSTRUCTIONS>
-${contextString}
-<TARGET_SECTION>${targetSection}</TARGET_SECTION>${assetsString}
-
-Please generate the updated HTML for just the \`${targetSection}\` section, using vanilla JavaScript for interactivity and CSS transitions, ensuring strong accessibility.`;
-
-        // First, generate the updated section
-        const sectionResult = await generateText({
-          model: openai("gpt-4.1"),
-          system: sectionSystemPrompt,
-          prompt: sectionUserPrompt,
-        });
-
-        // Define system prompt for stitching
-        const stitchSystemPrompt = `<SYSTEM_PROMPT>
+/**
+ * System prompt for stitching updated section into full HTML
+ */
+function getStitchSystemPrompt(targetSection: string): string {
+  return `<SYSTEM_PROMPT>
 Precisely update an HTML document by replacing a specific section.
 
 <RULES>
@@ -219,38 +145,14 @@ Precisely update an HTML document by replacing a specific section.
 
 Output ONLY the complete updated HTML document without explanations.
 </SYSTEM_PROMPT>`;
+}
 
-        // Define user prompt for stitching
-        const stitchUserPrompt = `<CURRENT_HTML>
-${currentHtml}
-</CURRENT_HTML>
-
-<NEW_SECTION_CONTENT section="${targetSection}">
-${sectionResult.text}
-</NEW_SECTION_CONTENT>
-
-Please integrate the new section content into the current HTML, replacing the existing \`${targetSection}\` section marked by comments. Do not modify other parts of the document, especially existing \`<script>\` tags unless absolutely necessary and instructed.`;
-
-        // Now, stitch the updated section into the full HTML using a different model
-        const stitchResult = await generateText({
-          model: openai("gpt-4.1"),
-          system: stitchSystemPrompt,
-          prompt: stitchUserPrompt,
-        });
-
-        // Process the result to remove any markdown formatting if present
-        let processedHtml = stitchResult.text;
-        // Remove triple backticks if the AI accidentally includes them
-        if (processedHtml.startsWith("```") || processedHtml.startsWith("```html")) {
-          processedHtml = processedHtml.replace(/^```(html)?\n/, "").replace(/```$/, "");
-        }
-
-        updatedHtml = processedHtml;
-      } else {
-        // If no specific section is targeted, update the entire website
-        // Define system prompt for full update
-        const fullUpdateSystemPrompt = `<SYSTEM_PROMPT>
-Update an existing website built with HTML, Tailwind CSS, and vanilla JavaScript.
+/**
+ * System prompt for full website updates
+ */
+function getFullWebsiteUpdateSystemPrompt(): string {
+  return `<SYSTEM_PROMPT>
+Create a complete website in HTML, Tailwind CSS, and vanilla JavaScript based on the user's instructions.
 
 <UPDATE_REQUIREMENTS>
 - Use the existing HTML structure as a foundation
@@ -553,14 +455,130 @@ IMPORTANT: DO NOT wrap your HTML output with triple backticks (\`\`\`). Return O
 
 Output ONLY the complete updated HTML with NO explanations or markdown formatting.
 </SYSTEM_PROMPT>`;
+}
 
-        // Define user prompt for full update
+/**
+ * Schema for the updateWebsite tool parameters
+ */
+export const updateWebsiteSchema = z.object({
+  projectId: z.string(),
+  instructions: z.string(),
+  assets: z
+    .array(
+      z.object({
+        id: z.string(),
+        description: z.string(),
+        url: z.string(),
+        type: z.string(),
+      })
+    )
+    .optional()
+    .default([]),
+  section: z.string().optional(),
+  context: z.string().optional(),
+  deploy: z.boolean().optional().default(true),
+});
+
+/**
+ * Tool for updating an existing website
+ */
+export const updateWebsite = tool({
+  description:
+    "Update an existing website based on user requirements and context",
+  parameters: updateWebsiteSchema,
+  execute: async ({
+    projectId,
+    instructions,
+    assets = [],
+    section,
+    context,
+    deploy = true,
+  }: z.infer<typeof updateWebsiteSchema>) => {
+    try {
+      // Get the current project to retrieve the latest HTML
+      const project = getWebProject(projectId);
+      if (!project) {
+        console.error(`Project not found: ${projectId}`);
+        return {
+          success: false,
+          message: "Project not found",
+        };
+      }
+
+      // Get the HTML content based on current version
+      let currentHtml: string | null = null;
+      if (
+        project.htmlVersions &&
+        project.htmlVersions.length > 0 &&
+        project.currentHtmlIndex !== null
+      ) {
+        currentHtml =
+          project.htmlVersions[project.currentHtmlIndex].htmlContent;
+      } else {
+        console.error(`No HTML versions found for project ${projectId}`);
+        return {
+          success: false,
+          message:
+            "No existing website found to update. Please use createWebsite instead.",
+        };
+      }
+
+      // Get the assets
+      const selectedAssets = assets || [];
+
+      // Format assets and context for the prompt
+      const assetsString = formatAssetsString(selectedAssets);
+      const contextString = formatContextString(context);
+
+      let updatedHtml: string;
+
+      // If a specific section is targeted, update just that section
+      if (section) {
+        // Step 1: Generate the updated section
+        const sectionUserPrompt = `<CURRENT_HTML_REFERENCE_ONLY>
+${currentHtml}
+</CURRENT_HTML_REFERENCE_ONLY>
+
+<UPDATE_INSTRUCTIONS>
+${instructions}
+</UPDATE_INSTRUCTIONS>
+${contextString}
+<TARGET_SECTION>${section}</TARGET_SECTION>${assetsString}
+
+Please generate the updated HTML for just the \`${section}\` section, using vanilla JavaScript for interactivity and CSS transitions, ensuring strong accessibility.`;
+
+        const sectionResult = await generateText({
+          model: openai("gpt-4.1"),
+          system: getSectionUpdateSystemPrompt(section),
+          prompt: sectionUserPrompt,
+        });
+
+        // Step 2: Stitch the updated section into the full HTML
+        const stitchUserPrompt = `<CURRENT_HTML>
+${currentHtml}
+</CURRENT_HTML>
+
+<NEW_SECTION_CONTENT section="${section}">
+${sectionResult.text}
+</NEW_SECTION_CONTENT>
+
+Please integrate the new section content into the current HTML, replacing the existing \`${section}\` section marked by comments. Do not modify other parts of the document, especially existing \`<script>\` tags unless absolutely necessary and instructed.`;
+
+        const stitchResult = await generateText({
+          model: openai("gpt-4.1"),
+          system: getStitchSystemPrompt(section),
+          prompt: stitchUserPrompt,
+        });
+
+        updatedHtml = cleanHtmlOutput(stitchResult.text);
+      } else {
+        // Update the entire website
         const fullUpdateUserPrompt = `<CURRENT_HTML>
 ${currentHtml}
 </CURRENT_HTML>
 
 <UPDATE_INSTRUCTIONS>
-${updateInstructions}
+${instructions}
 </UPDATE_INSTRUCTIONS>
 ${contextString}${assetsString}
 
@@ -568,39 +586,62 @@ Please update the website (HTML structure and JavaScript code) according to thes
 
         const result = await generateText({
           model: openai("gpt-4.1"),
-          system: fullUpdateSystemPrompt,
+          system: getFullWebsiteUpdateSystemPrompt(),
           prompt: fullUpdateUserPrompt,
         });
 
-        // Process the result to remove any markdown formatting if present
-        let processedHtml = result.text;
-        // Remove triple backticks if the AI accidentally includes them
-        if (processedHtml.startsWith("```") || processedHtml.startsWith("```html")) {
-          processedHtml = processedHtml.replace(/^```(html)?\n/, "").replace(/```$/, "");
-        }
-        
-        updatedHtml = processedHtml;
+        updatedHtml = cleanHtmlOutput(result.text);
       }
 
       // Save the updated HTML to the database
       const htmlId = await addHtmlVersion(projectId, updatedHtml);
 
-      // Deploy the HTML to a domain
-      await deployHtmlToDomain(
-        project.domain,
-        updatedHtml
-      );
-      console.log(`Deployed updated website successfully`);
+      // Check if project has a domain before deployment
+      if (!project.domain || !deploy) {
+        console.error(
+          `Project ${projectId} has no domain to deploy to or deploy flag is false`
+        );
+        return {
+          success: true,
+          message: `Website updated successfully but not deployed`,
+          htmlVersionId: htmlId,
+          usedAssets: selectedAssets,
+        };
+      }
+
+      // Deploy the HTML to the domain
+      try {
+        await deployHtmlToDomain(project.domain, updatedHtml);
+        console.log(
+          `Deployed updated website successfully to ${project.domain}`
+        );
+      } catch (deployError) {
+        console.error(
+          `Failed to deploy to domain ${project.domain}:`,
+          deployError
+        );
+        return {
+          success: true,
+          message: `Website updated but deployment failed: ${
+            deployError instanceof Error
+              ? deployError.message
+              : String(deployError)
+          }`,
+          htmlVersionId: htmlId,
+          usedAssets: selectedAssets,
+        };
+      }
 
       return {
         success: true,
-        message: targetSection
-          ? `Website section '${targetSection}' updated successfully!`
+        message: section
+          ? `Website section '${section}' updated successfully!`
           : "Website updated successfully!",
         htmlVersionId: htmlId,
-        usedAssetIds: assetIds
+        usedAssets: selectedAssets,
       };
     } catch (error) {
+      console.error("Error updating website:", error);
       return {
         success: false,
         message: `Failed to update website: ${

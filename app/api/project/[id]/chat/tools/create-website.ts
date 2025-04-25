@@ -5,6 +5,52 @@ import { generateText, tool } from "ai";
 import { z } from "zod";
 
 /**
+ * Formats selected assets as a string for the prompt
+ */
+function formatAssetsString(selectedAssets: any[]) {
+  if (selectedAssets.length === 0) {
+    return "<ASSETS_TO_USE>None</ASSETS_TO_USE>";
+  }
+  
+  return `<ASSETS_TO_USE>
+${selectedAssets
+    .map(
+      (asset, index) =>
+        `Asset ${index + 1}:
+Description: ${asset.description}
+URL: ${asset.url}
+Type: ${asset.type}`
+    )
+    .join("\\n")}
+</ASSETS_TO_USE>
+`;
+}
+
+/**
+ * Formats context as a string for the prompt
+ */
+function formatContextString(context: string) {
+  if (!context) {
+    return "<ADDITIONAL_CONTEXT>None</ADDITIONAL_CONTEXT>";
+  }
+  
+  return `<ADDITIONAL_CONTEXT>
+${context}
+</ADDITIONAL_CONTEXT>
+`;
+}
+
+/**
+ * Cleans HTML output from AI by removing any markdown formatting
+ */
+function cleanHtmlOutput(htmlContent: string): string {
+  if (htmlContent.startsWith("```") || htmlContent.startsWith("```html")) {
+    return htmlContent.replace(/^```(html)?\n/, "").replace(/```$/, "");
+  }
+  return htmlContent;
+}
+
+/**
  * Tool for creating a new website from scratch
  */
 export const createWebsite = tool({
@@ -41,38 +87,82 @@ export const createWebsite = tool({
 
       // Get the assets by ID
       const assets = project.assets || [];
-      const selectedAssets =
-        assetIds.length > 0
-          ? assets.filter((asset) => assetIds.includes(asset.id))
-          : [];
+      const selectedAssets = assetIds.length > 0
+        ? assets.filter((asset) => assetIds.includes(asset.id))
+        : [];
 
-      // Format assets for the prompt
-      const assetsString =
-        selectedAssets.length > 0
-          ? `<ASSETS_TO_USE>
-${selectedAssets
-              .map(
-                (asset, index) =>
-                  `Asset ${index + 1}:
-Description: ${asset.description}
-URL: ${asset.url}
-Type: ${asset.type}`
-              )
-              .join("\\n")}
-</ASSETS_TO_USE>
-`
-          : "<ASSETS_TO_USE>None</ASSETS_TO_USE>";
+      // Format data for the prompt
+      const assetsString = formatAssetsString(selectedAssets);
+      const contextString = formatContextString(context);
 
-      // Format context for the prompt
-      const contextString = context
-        ? `<ADDITIONAL_CONTEXT>
-${context}
-</ADDITIONAL_CONTEXT>
-`
-        : "<ADDITIONAL_CONTEXT>None</ADDITIONAL_CONTEXT>";
+      // Generate the website using AI
+      let htmlContent;
+      try {
+        const result = await generateText({
+          model: openai("gpt-4.1"),
+          system: SYSTEM_PROMPT,
+          prompt: `<USER_INSTRUCTIONS>
+${instructions}
+</USER_INSTRUCTIONS>
+${contextString}${assetsString}
 
-      // Define the system prompt
-      const systemPrompt = `<SYSTEM_PROMPT>
+Please generate a complete, beautiful, accessible, and functional single-page website using vanilla JavaScript and Tailwind CSS, following all requirements. Choose a primary color palette that fits the design aesthetic. Ensure responsiveness and use CSS transitions for subtle animations where appropriate. For data-driven applications, include simple filtering, sorting, and search capabilities without making up data. Use ApexCharts for data visualization with vanilla JavaScript and Grid.js for interactive tables.`,
+        });
+        
+        htmlContent = cleanHtmlOutput(result.text);
+      } catch (aiError) {
+        console.error("Error generating website with AI:", aiError);
+        return {
+          success: false,
+          message: "Failed to generate website content with AI",
+        };
+      }
+
+      // Save the HTML content to the database
+      let htmlId;
+      try {
+        htmlId = await addHtmlVersion(projectId, htmlContent);
+      } catch (dbError) {
+        console.error("Error saving HTML version to database:", dbError);
+        return {
+          success: false,
+          message: "Failed to save website to database",
+        };
+      }
+
+      // Deploy the HTML to the domain
+      try {
+        await deployHtmlToDomain(project.domain, htmlContent);
+        console.log(`Deployed website successfully to ${project.domain}`);
+      } catch (deployError) {
+        console.error("Error deploying website:", deployError);
+        return {
+          success: false,
+          message: "Website created but deployment failed",
+          htmlVersionId: htmlId,
+        };
+      }
+
+      return {
+        success: true,
+        message: "Website created successfully!",
+        htmlVersionId: htmlId,
+        usedAssetIds: assetIds,
+      };
+    } catch (error) {
+      console.error("Error in createWebsite tool:", error);
+      return {
+        success: false,
+        message: `Failed to create website: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      };
+    }
+  },
+});
+
+// System prompt for website generation
+const SYSTEM_PROMPT = `<SYSTEM_PROMPT>
 Create a beautiful, accessible, responsive single-page website using vanilla JavaScript and Tailwind CSS.
 
 <REQUIREMENTS>
@@ -362,52 +452,3 @@ IMPORTANT: DO NOT wrap your HTML output with triple backticks (\`\`\`). Return O
 
 Output ONLY the complete HTML code without explanations. Include all necessary CDN links and proper initialization.
 </SYSTEM_PROMPT>`;
-
-      // Define the user prompt
-      const userPrompt = `<USER_INSTRUCTIONS>
-${instructions}
-</USER_INSTRUCTIONS>
-${contextString}${assetsString}
-
-Please generate a complete, beautiful, accessible, and functional single-page website using vanilla JavaScript and Tailwind CSS, following all requirements. Choose a primary color palette that fits the design aesthetic. Ensure responsiveness and use CSS transitions for subtle animations where appropriate. For data-driven applications, include simple filtering, sorting, and search capabilities without making up data. Use ApexCharts for data visualization with vanilla JavaScript and Grid.js for interactive tables.`;
-
-      // Generate the website using AI
-      const result = await generateText({
-        model: openai("gpt-4.1"),
-        system: systemPrompt,
-        prompt: userPrompt,
-      });
-
-      // Process the result to remove any markdown formatting if present
-      let htmlContent = result.text;
-      // Remove triple backticks if the AI accidentally includes them
-      if (htmlContent.startsWith("```") || htmlContent.startsWith("```html")) {
-        htmlContent = htmlContent.replace(/^```(html)?\n/, "").replace(/```$/, "");
-      }
-
-      // Save the HTML content to the database
-      const htmlId = await addHtmlVersion(projectId, htmlContent);
-
-      // Deploy the HTML to a domain
-      await deployHtmlToDomain(
-        project.domain, 
-        htmlContent
-      );
-      console.log(`Deployed website successfully`);
-
-      return {
-        success: true,
-        message: "Website created successfully!",
-        htmlVersionId: htmlId,
-        usedAssetIds: assetIds
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to create website: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      };
-    }
-  },
-});

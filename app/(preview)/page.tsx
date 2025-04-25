@@ -17,16 +17,20 @@ import Link from "next/link";
 function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
   if (!messages?.length) return false;
 
-  return messages.some((m) => {
-    if (m.role !== "assistant" || !m.parts) return false;
-
-    return m.parts.some((part: any) => 
+  return messages.some((m) => 
+    m.role === "assistant" && 
+    m.parts?.some((part: any) => 
       part.type === "tool-invocation" && 
       ["createWebsite", "updateWebsite"].includes(part.toolInvocation.toolName) && 
       part.toolInvocation.state !== "result"
-    );
-  });
+    )
+  );
 }
+
+type PendingMessage = {
+  content: string;
+  attachments: AttachmentPreview[];
+} | null;
 
 export default function Home() {
   const queryClient = useQueryClient();
@@ -35,13 +39,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreviewPane, setShowPreviewPane] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState<PendingMessage>(null);
   
-  // Pending message state for when projectId isn't available yet
-  const [pendingMessage, setPendingMessage] = useState<{
-    content: string;
-    attachments: AttachmentPreview[];
-  } | null>(null);
-
   // Fetch project data
   const {
     data: project,
@@ -53,7 +52,8 @@ export default function Home() {
       if (!projectId) return null;
       const res = await fetch(`/api/project/${projectId}`);
       if (!res.ok) {
-        throw new Error((await res.json()).error || "Failed to fetch project");
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to fetch project");
       }
       return res.json();
     },
@@ -80,14 +80,11 @@ export default function Home() {
       return data;
     },
     onSuccess: () => {
-      toast.success(
-        <div className="flex flex-col gap-1 items-start">
-          <span>Website deployed successfully!</span>
-        </div>
-      );
+      toast.success("Website deployed successfully!");
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
     },
     onError: (error: any) => {
+      console.error("Deploy error:", error);
       toast.error(error.message || "Failed to deploy website");
     },
   });
@@ -137,7 +134,8 @@ export default function Home() {
       setProjectId(id);
       setLandingInput(""); 
     } catch (err: any) {
-      setError(err.message);
+      console.error("Project creation error:", err);
+      setError(err.message || "Failed to create project");
     } finally {
       setLoading(false);
     }
@@ -187,7 +185,7 @@ export default function Home() {
   // Render loading state
   if (projectLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-b">
+      <div className="flex flex-col items-center justify-center h-screen">
         <Loader className="w-8 h-8 text-slate-500 animate-spin mb-4" />
         <div className="text-lg font-medium text-gray-700">Loading your project...</div>
       </div>
@@ -198,10 +196,66 @@ export default function Home() {
   if (projectError) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-red-50">
-        <div className="text-lg font-medium text-red-600 max-w-md text-center mx-auto">{projectError.message}</div>
+        <div className="text-lg font-medium text-red-600 max-w-md text-center mx-auto">
+          {projectError instanceof Error ? projectError.message : "Failed to load project"}
+        </div>
       </div>
     );
   }
+
+  const renderMobilePreviewToggle = () => {
+    if (showPreviewPane) return null;
+    
+    return (
+      <button
+        className="fixed z-40 top-16 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md px-2 py-2 flex items-center"
+        onClick={() => setShowPreviewPane(true)}
+        aria-label="Show Preview Pane"
+      >
+        <ChevronLeft size={18} className="mr-1 transform transition-transform" />
+      </button>
+    );
+  };
+
+  const renderMobilePreviewDrawer = () => {
+    if (!showPreviewPane) return null;
+    
+    return (
+      <div className="fixed inset-0 z-50 flex lg:hidden pt-12">
+        <div 
+          className="absolute inset-0 bg-black/40" 
+          onClick={() => setShowPreviewPane(false)} 
+        />
+        <div className="relative ml-auto w-full max-w-md h-full bg-white flex flex-col">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <GlobeIcon size={16} className="text-zinc-500" />
+            <span className="text-xs font-medium text-zinc-700">Website Preview</span>
+            <button
+              className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"
+              onClick={() => setShowPreviewPane(false)}
+              aria-label="Close Preview Pane"
+            >
+              <XIcon className="w-4 h-4 text-zinc-800" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <PreviewPane
+              className="m-0 rounded-none"
+              htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
+              deployedVersionIndex={project?.currentHtmlIndex ?? null}
+              onDeploy={handleDeploy}
+              isUploading={deployMutation.isPending}
+              domain={deployedUrl}
+              isPreviewLoading={isPreviewLoading}
+              projectId={projectId as string}
+              deployedUrl={deployedUrl}
+              assets={project?.assets || []}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-screen flex flex-col">
@@ -220,61 +274,13 @@ export default function Home() {
         <div className="flex items-center gap-1.5">
           <GlobeIcon size={16} className="text-zinc-600" />
           <span className="text-sm font-medium text-zinc-800">
-            {project?.domain || "Project " + projectId?.substring(0, 8)}
+            {project?.domain || `Project ${projectId?.substring(0, 8)}`}
           </span>
         </div>
       </header>
 
-      {/* Floating toggle button for mobile */}
-      {!showPreviewPane && (
-        <button
-          className="fixed z-40 top-16 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md pl-2 pr-2 py-2 flex items-center"
-          onClick={() => setShowPreviewPane(true)}
-          aria-label="Show Preview Pane"
-        >
-          <ChevronLeft size={18} className="mr-1 transform transition-transform group-hover:-translate-x-1" />
-        </button>
-      )}
-
-      {/* Mobile Preview Pane Drawer */}
-      {showPreviewPane && (
-        <div className="fixed inset-0 z-50 flex lg:hidden pt-12">
-          <div 
-            className="absolute inset-0 bg-black/40" 
-            onClick={() => setShowPreviewPane(false)} 
-          />
-          <div className="relative ml-auto w-full max-w-md h-full bg-white flex flex-col">
-            {/* Compact mobile header */}
-            <div className="flex items-center gap-2 px-3 py-2">
-              <GlobeIcon size={16} className="text-zinc-500" />
-              <span className="text-xs font-medium text-zinc-700">Website Preview</span>
-              <button
-                className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"
-                onClick={() => setShowPreviewPane(false)}
-                aria-label="Close Preview Pane"
-              >
-                <XIcon className="w-4 h-4 text-zinc-800" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <PreviewPane
-                className="m-0 rounded-none"
-                htmlVersions={htmlVersions.map(
-                  (v: { htmlContent: string }) => v.htmlContent
-                )}
-                deployedVersionIndex={project?.currentHtmlIndex ?? null}
-                onDeploy={handleDeploy}
-                isUploading={deployMutation.isPending}
-                domain={deployedUrl}
-                isPreviewLoading={isPreviewLoading}
-                projectId={projectId as string}
-                deployedUrl={deployedUrl}
-                assets={project?.assets || []}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {renderMobilePreviewToggle()}
+      {renderMobilePreviewDrawer()}
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Chat section */}
@@ -297,9 +303,7 @@ export default function Home() {
         <div className="hidden lg:flex flex-1 flex-col h-full">
           <div className="h-full flex-1 flex flex-col">
             <PreviewPane
-              htmlVersions={htmlVersions.map(
-                (v: { htmlContent: string }) => v.htmlContent
-              )}
+              htmlVersions={htmlVersions.map((v: { htmlContent: string }) => v.htmlContent)}
               deployedVersionIndex={project?.currentHtmlIndex ?? null}
               onDeploy={handleDeploy}
               isUploading={deployMutation.isPending}

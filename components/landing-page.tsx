@@ -404,12 +404,19 @@ export default function LandingPage({ input, setInput, onSend, loading, error, c
                             >
                               <div className="text-zinc-900 font-medium truncate group flex items-center">
                                 {project.domain}
-                                {project.currentHtmlIndex !== null && (
+                                {project.currentHtmlIndex !== null ? (
                                   <Badge
                                     variant="outline"
                                     className="ml-2 h-5 bg-green-50 text-green-700 border-green-200 text-[10px] font-medium"
                                   >
                                     Live
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    variant="outline"
+                                    className="ml-2 h-5 bg-gray-50 text-gray-700 border-gray-200 text-[10px] font-medium"
+                                  >
+                                    Draft
                                   </Badge>
                                 )}
                               </div>

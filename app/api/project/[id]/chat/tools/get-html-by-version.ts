@@ -17,16 +17,29 @@ export const getHtmlByVersion = tool({
   }),
   execute: async ({ projectId, versionId }) => {
     try {
+      // Validate project exists
       const project = getWebProject(projectId);
       if (!project) {
+        console.error(`Project not found: ${projectId}`);
         return {
           success: false,
           message: "Project not found"
         };
       }
 
-      const htmlVersion = project.htmlVersions?.find(v => v.id === versionId);
+      // Validate HTML version exists
+      if (!project.htmlVersions?.length) {
+        console.error(`No HTML versions found for project: ${projectId}`);
+        return {
+          success: false,
+          message: "No HTML versions found for this project"
+        };
+      }
+
+      // Find the requested version
+      const htmlVersion = project.htmlVersions.find(v => v.id === versionId);
       if (!htmlVersion) {
+        console.error(`HTML version with ID ${versionId} not found in project ${projectId}`);
         return {
           success: false,
           message: `HTML version with ID ${versionId} not found`
@@ -40,6 +53,7 @@ export const getHtmlByVersion = tool({
         createdAt: htmlVersion.createdAt
       };
     } catch (error) {
+      console.error("Error retrieving HTML version:", error);
       return {
         success: false,
         message: `Failed to retrieve HTML version: ${
