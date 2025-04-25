@@ -4,14 +4,14 @@ import { Chat } from "@/components/chat";
 import { AttachmentPreview } from "@/components/input";
 import LandingPage from "@/components/landing-page";
 import PreviewPane from "@/components/preview-pane";
+import { Button } from "@/components/ui/button";
 import { Message as MessageType, useChat } from "@ai-sdk/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChevronLeft, GlobeIcon, Loader, XIcon } from "lucide-react";
+import { ArrowLeft, EyeIcon, Loader, XIcon } from "lucide-react";
+import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 // Check if website generation is in progress from messages
 function isPreviewLoadingFromMessages(messages: MessageType[]): boolean {
@@ -203,32 +203,18 @@ export default function Home() {
     );
   }
 
-  const renderMobilePreviewToggle = () => {
-    if (showPreviewPane) return null;
-    
-    return (
-      <button
-        className="fixed z-40 top-16 -right-1 lg:hidden bg-slate-800 text-white rounded-l-md px-2 py-2 flex items-center"
-        onClick={() => setShowPreviewPane(true)}
-        aria-label="Show Preview Pane"
-      >
-        <ChevronLeft size={18} className="mr-1 transform transition-transform" />
-      </button>
-    );
-  };
-
   const renderMobilePreviewDrawer = () => {
     if (!showPreviewPane) return null;
     
     return (
-      <div className="fixed inset-0 z-50 flex lg:hidden pt-12">
+      <div className="fixed inset-0 z-50 flex lg:hidden">
         <div 
           className="absolute inset-0 bg-black/40" 
           onClick={() => setShowPreviewPane(false)} 
         />
-        <div className="relative ml-auto w-full max-w-md h-full bg-white flex flex-col">
+        <div className="relative w-full h-full bg-white flex flex-col">
           <div className="flex items-center gap-2 px-3 py-2">
-            <GlobeIcon size={16} className="text-zinc-500" />
+            <EyeIcon size={16} className="text-zinc-500" />
             <span className="text-xs font-medium text-zinc-700">Website Preview</span>
             <button
               className="ml-auto bg-zinc-100 hover:bg-zinc-200 rounded-md p-1"
@@ -272,14 +258,23 @@ export default function Home() {
           </Link>
         </Button>
         <div className="flex items-center gap-1.5">
-          <GlobeIcon size={16} className="text-zinc-600" />
           <span className="text-sm font-medium text-zinc-800">
             {project?.domain || `Project ${projectId?.substring(0, 8)}`}
           </span>
         </div>
+        {/* Preview toggle button in header - mobile only */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto lg:hidden flex items-center gap-1.5 px-3"
+          onClick={() => setShowPreviewPane(true)}
+          aria-label="Show Preview"
+        >
+          <EyeIcon size={16} />
+          <span>Preview</span>
+        </Button>
       </header>
 
-      {renderMobilePreviewToggle()}
       {renderMobilePreviewDrawer()}
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
